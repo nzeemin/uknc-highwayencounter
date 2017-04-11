@@ -49,16 +49,145 @@ PAUSE0:	NOP
 	SOB	R5, PAUSE0
 	RETURN
 
+; Draw sprite with shift by -2px
+L9933:	MOV	R1, R3		; 9933	LD L,C	
+				; 9934	LD H,B	
+	MOV	#24., R0	; 9935	LD A,$18	
+L9937:	PUSH	R0		; 9937	EX AF,AF'	
+				; 9938	EX DE,HL	
+	MOV	(R2)+, R0	; 9939	LD A,(HL)	
+				; 993A	INC HL	
+	MOVB	(R2)+, R1	; 993B	LD B,(HL)	
+				; 993C	INC HL	
+				; 993D	LD C,(HL)	
+				; 993E	INC HL	
+	ASL	R0		; 993F	SRA A	
+	ROLB	R1		; 9941	RR B	
+				; 9943	RR C	
+	ASL	R0		; 9945	SRA A	
+	ROLB	R1		; 9947	RR B	
+				; 9949	RR C	
+				; 994B	EX DE,HL	
+	BICB	R0, (R3)+	; 994C	AND (HL)	
+				; 994D	LD (HL),A	
+	SWAB	R0		; 994E	LD A,B	
+				; 994F	INC HL	
+	BICB	R0, (R3)+	; 9950	AND (HL)	
+				; 9951	LD (HL),A	
+				; 9952	LD A,C	
+				; 9953	INC HL	
+	BICB	R1, (R3)	; 9954	AND (HL)	
+				; 9955	LD (HL),A	
+	DEC	R3		; 9956	DEC HL	
+	DEC	R3		; 9957	DEC HL	
+				; 9958	EX DE,HL	
+	MOVB	(R2)+, R0	; 9959	LD A,(HL)	
+				; 995A	INC HL	
+	MOV	(R2)+, R1	; 995B	LD B,(HL)	
+				; 995C	INC HL	
+				; 995D	LD C,(HL)	
+				; 995E	INC HL	
+	ASLB	R0		; 995F	SRL A	
+	ROL	R1		; 9961	RR B	
+				; 9963	RR C	
+	ASLB	R0		; 9965	SRL A	
+	ROL	R1		; 9967	RR B	
+				; 9969	RR C	
+				; 996B	EX DE,HL	
+	BISB	R0, (R3)+	; 996C	OR (HL)	
+				; 996D	LD (HL),A	
+				; 996E	LD A,B	
+				; 996F	INC HL	
+	BISB	R1, (R3)+	; 9970	OR (HL)	
+				; 9971	LD (HL),A	
+	SWAB	R1		; 9972	LD A,C	
+				; 9973	INC HL	
+	BISB	R1, (R3)	; 9974	OR (HL)	
+				; 9975	LD (HL),A	
+	SUB	#34., R3	; 9976	LD BC,$FFDE	
+				; 9979	ADD HL,BC	
+	POP	R0		; 997A	EX AF,AF'	
+	SOB	R0, L9937	; 997B	DEC A	
+				; 997C	JP NZ,$9937	
+	RETURN			; 997F	RET	
+
+; Draw sprite with shift by 4px
+L99D1:
+	MOV	R1, R3		; 99D1	LD H,B	
+				; 99D2	LD L,C	
+	MOV	#24., R0	; 99D3	LD A,$18	Sprite height = 24
+L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
+				; 99D6	EX DE,HL	
+	MOV	(R2)+, R0	; 99D7	LD A,(HL)	Get mask byte 0
+				; 99D8	INC HL	
+				; 99D9	LD B,(HL)	Get mask byte 1
+				; 99DA	INC HL	
+	MOVB	(R2)+, R1	; 99DB	LD C,(HL)	Get mask byte 2
+				; 99DC	INC HL	
+				; 99DD	SCF	
+	ASRB	R1		; 99DE	RL C	Shift by 1
+	ROR	R0		; 99E0	RL B
+				; 99E2	RLA
+	ASRB	R1		; 99E3	RL C	Shift by 2
+	ROR	R0		; 99E5	RL B
+				; 99E7	RLA
+	ASRB	R1		; 99E8	RL C	Shift by 3
+	ROR	R0		; 99EA	RL B
+				; 99EC	RLA
+	ASRB	R1		; 99ED	RL C	Shift by 4
+	ROR	R0		; 99EF	RL B
+				; 99F1	RLA
+				; 99F2	EX DE,HL	
+	BICB	R0, (R3)+	; 99F3	AND (HL)	
+				; 99F4	LD (HL),A	
+	SWAB	R0		; 99F5	LD A,B	
+				; 99F6	INC HL	
+	BICB	R0, (R3)	; 99F7	AND (HL)	
+				; 99F8	LD (HL),A	
+	DEC	R3		; 99F9	DEC HL	
+				; 99FA	EX DE,HL	
+	MOVB	(R2)+, R0	; 99FB	LD A,(HL)	
+				; 99FC	INC HL	
+	MOV	(R2)+, R1	; 99FD	LD B,(HL)	
+				; 99FE	INC HL	
+				; 99FF	LD C,(HL)	
+				; 9A00	INC HL	
+	ASR	R1		; 9A01	SLA C	Shift by 1
+	RORB	R0		; 9A03	RL B
+				; 9A05	RLA
+	ASR	R1		; 9A06	SLA C	Shift by 2
+	RORB	R0		; 9A08	RL B
+				; 9A0A	RLA
+	ASR	R1		; 9A0B	SLA C	Shift by 3
+	RORB	R0		; 9A0D	RL B
+				; 9A0F	RLA
+	ASR	R1		; 9A10	SLA C	Shift by 4
+	RORB	R0		; 9A12	RL B
+				; 9A14	RLA
+				; 9A15	EX DE,HL	
+	BISB	R0, (R3)+	; 9A16	OR (HL)	
+				; 9A17	LD (HL),A	
+				; 9A18	LD A,B	
+				; 9A19	INC HL	
+	BISB	R1, (R3)	; 9A1A	OR (HL)	
+				; 9A1B	LD (HL),A	
+	SUB	#33., R3	; 9A1C	LD BC,$FFDF	
+				; 9A1F	ADD HL,BC	
+	POP	R0		; 9A20	EX AF,AF'	restore counter A
+	SOB	R0, L99D5	; 9A21	DEC A	
+				; 9A22	JP NZ,$99D5	loop by sprite height
+	RETURN			; 9A25	RET	
+
 ; Draw sprite with no shift
 L9A70:	MOV	R1, R3		; 9A70	LD H,B	
 				; 9A71	LD L,C	
 	MOV	#24., R1	; 9A72	LD B,$18	
-L9A74:	MOVB	(R2)+, R0	; 9A74	LD A,(DE)	
+L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)	
 	BICB	R0, (R3)+	; 9A75	AND (HL)	
 				; 9A76	LD (HL),A	
 				; 9A77	INC DE	
 				; 9A78	INC HL	
-	MOVB	(R2)+, R0	; 9A79	LD A,(DE)	
+	SWAB	R0		; 9A79	LD A,(DE)	
 	BICB	R0, (R3)+	; 9A7A	AND (HL)	
 				; 9A7B	LD (HL),A	
 				; 9A7C	INC DE	
@@ -74,12 +203,12 @@ L9A74:	MOVB	(R2)+, R0	; 9A74	LD A,(DE)
 				; 9A86	LD (HL),A	
 				; 9A87	INC DE	
 				; 9A88	INC HL	
-	MOVB	(R2)+, R0	; 9A89	LD A,(DE)	
+	MOV	(R2)+, R0	; 9A89	LD A,(DE)	
 	BISB	R0, (R3)+	; 9A8A	OR (HL)	
 				; 9A8B	LD (HL),A	
 				; 9A8C	INC DE	
 				; 9A8D	INC HL	
-	MOVB	(R2)+, R0	; 9A8E	LD A,(DE)	
+	SWAB	R0		; 9A8E	LD A,(DE)	
 	BISB	R0, (R3)	; 9A8F	OR (HL)	
 				; 9A90	LD (HL),A	
 				; 9A91	INC DE	
@@ -218,8 +347,12 @@ LB4D0:	MOVB	#6, LB4CF	; B4D0	LD A,$06
 	MOV	#<LDBC0+2306.>, R1	; B4F3	LD BC,$E4C2	
 	MOV	#LC040, R2	; B4F6	LD DE,$C040	Sprite: Vorton looking forward
 	CALL	L9A70		; B4F9	CALL $8F82	JP 9A70 Draw sprite with no shift
-	;TODO
-
+	MOV	#<LDBC0+2504.>, R1	; B4FC	LD BC,$E588	
+	MOV	#LD240, R2	; B4FF	LD DE,$D240	Sprite: Lasertron
+	CALL	L9933		; B502	CALL $8F85	JP 9933 Draw sprite with shift by -2px
+	MOV	#<LDBC0+2914.>, R1	; B505	LD BC,$E722	
+	MOV	#LD630, R2	; B508	LD DE,$D630	Sprite: Main Vorton looking at player
+	CALL	L99D1		; B50B	CALL $8F7C	JP 99D1 Draw sprite with shift by 4px
 	CALL	LB39A		; B50E	CALL $B39A	Prepare screen with attributes
 	CALL	LB52D		; B511	CALL $B52D	Print Small Font Signs
 	MOV	#LB7B5, R3	; B514	LD HL,$B7B5	
@@ -234,34 +367,34 @@ LB52D:
 
 ; Info Screen Text
 LB7B5:	.WORD	112515
-	.BYTE	212,121,145,144,137,116,146,137,142,144,137,136,143,212,377,000	; AUTO-VORTONS
-	.WORD	120720
+	.BYTE	130,212,121,145,144,137,116,146,137,142,144,137,136,143,212,377	; AUTO-VORTONS
+	.WORD	117520
 	.BYTE	131,212,134,121,143,125,142,144,142,137,136,212,377,000		; LASERTRON
-	.WORD	123305
+	.WORD	124505
 	.BYTE	131,212,135,121,131,136,115,146,137,142,144,137,136,212,377,000	; MAIN VORTON
-	.WORD	130307
+	.WORD	131507
 	.BYTE	132,212,151,137,145,142,115,135,131,143,143,131,137,136,212,377	; YOUR MISSION
-	.WORD	125730
+	.WORD	125731
 	.BYTE	131,212,123,137,136,144,142,137,134,143,212,377			; CONTROLS
-	.WORD	130330
+	.WORD	130331
 	.BYTE	131,101,377,000							; I
-	.WORD	130335
+	.WORD	130336
 	.BYTE	131,137,377,000							; O
-	.WORD	131530
+	.WORD	131531
 	.BYTE	132,141,377,000							; Q
-	.WORD	131535
+	.WORD	131536
 	.BYTE	132,140,377,000							; P
-	.WORD	132730
+	.WORD	132731
 	.BYTE	132,152,377,000							; Z
-	.WORD	132732
+	.WORD	132733
 	.BYTE	132,135,377,000							; M
-	.WORD	132735
+	.WORD	132736
 	.BYTE	132,112,377,000							; ' '
-	.WORD	134130
+	.WORD	134131
 	.BYTE	132,130,377,000							; H
-	.WORD	135330
+	.WORD	135331
 	.BYTE	132,121,377,000							; A
-	.WORD	135332
+	.WORD	135333
 	.BYTE	132,127,377,000							; G
 	.WORD	142307
 	.BYTE	132,212,140,142,125,143,143,115,121,136,151,115,133,125,151,115	; PRESS ANY KEY
@@ -313,10 +446,12 @@ LB8C9:	BIC	#177700, R0	; B8C9	AND $3F
 				; B8DB	LD A,$7F	
 	ADD	#000120, R2	; B8DD	INC D		next line
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#177, (R5)	; B8DE	LD (DE),A	write to the screen
+	MOV	#077577, (R5)	; B8DE	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8DF	INC D		next line
 	MOV	#5, R1		; B8E0	LD B,$05	counter = 5
-LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)	
+LB8E2:	MOVB	(R3), R0	; B8E2	LD A,(HL)	
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)	; B8E3	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8E4	INC D		next line
@@ -324,7 +459,7 @@ LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)
 	SOB	R1, LB8E2	; B8E6	DJNZ $B8E2	repeat
 				; B8E8	LD A,$7F	
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#177, (R5)	; B8EA	LD (DE),A	write to the screen
+	MOV	#077577, (R5)	; B8EA	LD (DE),A	write to the screen
 	POP	R2		; B8EB	POP DE	
 	INC	R2		; B8EC	INC DE		next position on the screen
 	POP	R3		; B8ED	POP HL	

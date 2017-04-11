@@ -24,9 +24,11 @@ namespace SpriteRotate
             writer.WriteLine();
 
             ProcessSprites7100(writer);
+            writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
             ProcessMasksAndSprites(writer, bmpTiles);
+            writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
             writer.WriteLine("; END OF SPRITE.MAC");
