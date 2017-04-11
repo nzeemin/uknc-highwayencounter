@@ -89,12 +89,14 @@ namespace SpriteRotate
 
         static void ProcessMasksAndSprites(StreamWriter writer, Bitmap bmpTiles)
         {
-            writer.WriteLine("LB8F0::\t; Masks and Sprites, 57. sprites, 6 * 24 = 144 bytes each, 8208 bytes in total");
+            writer.WriteLine("; Masks and Sprites, 57. sprites, 6 * 24 = 144 bytes each, 8208 bytes in total");
             for (int sprite = 0; sprite < 57; sprite++)  // sprites
             {
                 int addr = 0xB8F0 + sprite * 6 * 24;
                 int x = 8 + (sprite % 6) * 52;
                 int y = 8 + (sprite / 6) * 28;
+
+                writer.Write("L{0}:", EncodeHexString2(addr));
 
                 for (int i = 0; i < 6 * 24; i++)  // bytes
                 {
@@ -109,7 +111,11 @@ namespace SpriteRotate
                         bmpTiles.SetPixel(x + (i % 6) * 8 + j, y + (23 - i / 6), color);
                     }
 
-                    writer.Write(EncodeOctalString((byte)b));
+                    int bb = 0;
+                    for (int j = 0; j < 8; j++)
+                        bb |= ((b >> (7 - j)) & 1) << j;
+                    if ((i % 6) < 3) bb = (~bb) & 255;  // Inverse the mask
+                    writer.Write(EncodeOctalString((byte)bb));
 
                     if ((i % 12) != 11)
                     {
@@ -150,6 +156,11 @@ namespace SpriteRotate
                 ((x >> 3) & 7),
                 (x & 7)
             );
+        }
+
+        static string EncodeHexString2(int x)
+        {
+            return x.ToString("X4");
         }
     }
 }

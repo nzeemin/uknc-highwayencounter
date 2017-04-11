@@ -17,13 +17,8 @@ START::
 	CALL	PRINT
 	CALL	PAUSE			; подождём пока очистится экран
 
-	CALL	LB2DA
-	CALL	LB39A
-
-;	MOV	#LB7B5, R3
-	MOV	#LB21E, R3	; B104	LD HL,$B21E	
-	CALL	LB890		; B107	CALL $B890	Print Text
-
+	CALL	LB4D0	; Show Info Screen
+	
 	HALT
 
 GAMESC:	; Строка подготовки игрового экрана
@@ -54,6 +49,46 @@ PAUSE0:	NOP
 	SOB	R5, PAUSE0
 	RETURN
 
+; Draw sprite with no shift
+L9A70:	MOV	R1, R3		; 9A70	LD H,B	
+				; 9A71	LD L,C	
+	MOV	#24., R1	; 9A72	LD B,$18	
+L9A74:	MOVB	(R2)+, R0	; 9A74	LD A,(DE)	
+	BICB	R0, (R3)+	; 9A75	AND (HL)	
+				; 9A76	LD (HL),A	
+				; 9A77	INC DE	
+				; 9A78	INC HL	
+	MOVB	(R2)+, R0	; 9A79	LD A,(DE)	
+	BICB	R0, (R3)+	; 9A7A	AND (HL)	
+				; 9A7B	LD (HL),A	
+				; 9A7C	INC DE	
+				; 9A7D	INC HL	
+	MOVB	(R2)+, R0	; 9A7E	LD A,(DE)	
+	BICB	R0, (R3)	; 9A7F	AND (HL)	
+				; 9A80	LD (HL),A	
+				; 9A81	INC DE	
+	DEC	R3		; 9A82	DEC HL	
+	DEC	R3		; 9A83	DEC HL	
+	MOVB	(R2)+, R0	; 9A84	LD A,(DE)	
+	BISB	R0, (R3)+	; 9A85	OR (HL)	
+				; 9A86	LD (HL),A	
+				; 9A87	INC DE	
+				; 9A88	INC HL	
+	MOVB	(R2)+, R0	; 9A89	LD A,(DE)	
+	BISB	R0, (R3)+	; 9A8A	OR (HL)	
+				; 9A8B	LD (HL),A	
+				; 9A8C	INC DE	
+				; 9A8D	INC HL	
+	MOVB	(R2)+, R0	; 9A8E	LD A,(DE)	
+	BISB	R0, (R3)	; 9A8F	OR (HL)	
+				; 9A90	LD (HL),A	
+				; 9A91	INC DE	
+				; 9A92	LD A,B	
+				; 9A93	LD BC,$FFDE	
+	SUB	#34., R3	; 9A96	ADD HL,BC	
+				; 9A97	LD B,A	
+	SOB	R1, L9A74	; 9A98	DJNZ $9A74	
+	RETURN			; 9A9A	RET	
 	
 ; Routine: Sound
 LB203:
@@ -146,7 +181,6 @@ LB39A:	;STUB
 ; Copy shadow screen to the real screen, 256. x 192. pixels
 LB3A9:
 	MOV	#LDBC0, R3
-;	MOV	#LDF00, R3 ;DEBUG
 	MOV	#105504, R2
 	MOV	#192., R0		; Количество копируемых строк
 	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
@@ -164,12 +198,42 @@ LB3A9:
 	SOB	R0, 1$			; продолжаем цикл по строкам
 	RETURN
 
+
+LB4CF:	.BYTE	104		; Attribute?
+        .EVEN
+	
+; Show Info Screen
+LB4D0:	MOVB	#6, LB4CF	; B4D0	LD A,$06	
+				; B4D2	LD ($B4CF),A	
+	CALL	LB2DA		; B4D5	CALL $B2DA	Prepare shadow screen
+	MOV	#<LDBC0+1925.>, R1	; B4D8	LD BC,$E345	
+	MOV	#LC040, R2	; B4DB	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70		; B4DE	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#<LDBC0+2052.>, R1	; B4E1	LD BC,$E3C4	
+	MOV	#LC040, R2	; B4E4	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70		; B4E7	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#<LDBC0+2179.>, R1	; B4EA	LD BC,$E443	
+	MOV	#LC040, R2	; B4ED	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70		; B4F0	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#<LDBC0+2306.>, R1	; B4F3	LD BC,$E4C2	
+	MOV	#LC040, R2	; B4F6	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70		; B4F9	CALL $8F82	JP 9A70 Draw sprite with no shift
+	;TODO
+
+	CALL	LB39A		; B50E	CALL $B39A	Prepare screen with attributes
+	CALL	LB52D		; B511	CALL $B52D	Print Small Font Signs
+	MOV	#LB7B5, R3	; B514	LD HL,$B7B5	
+	CALL	LB890		; B517	CALL $B890	Print Text
+	;TODO
+
+	RETURN ;STUB
+
 ; Print Small Font Signs on the Info Screen
 LB52D:
 	RETURN ;STUB
 
 ; Info Screen Text
-LB7B5:	.WORD	112513
+LB7B5:	.WORD	112515
 	.BYTE	212,121,145,144,137,116,146,137,142,144,137,136,143,212,377,000	; AUTO-VORTONS
 	.WORD	120720
 	.BYTE	131,212,134,121,143,125,142,144,142,137,136,212,377,000		; LASERTRON
