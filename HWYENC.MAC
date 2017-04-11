@@ -1,0 +1,282 @@
+	.TITLE	EXPRES
+	.MCALL	.EXIT
+
+.MACRO	PUSH	RR
+	MOV	RR,-(SP)
+.ENDM
+.MACRO	POP	RR
+	MOV	(SP)+,RR
+.ENDM
+
+	.ASECT
+	.=001000
+START::
+	CLR	@#177560
+
+	MOV	#GAMESC, R1		; Строка для подготовки игрового экрана
+	CALL	PRINT
+	CALL	PAUSE			; подождём пока очистится экран
+
+	CALL	LB2DA
+	CALL	LB39A
+
+;	MOV	#LB7B5, R3
+	MOV	#LB21E, R3	; B104	LD HL,$B21E	
+	CALL	LB890		; B107	CALL $B890	Print Text
+
+	HALT
+
+GAMESC:	; Строка подготовки игрового экрана
+	.BYTE	33,246,62		; Формат экрана 40x24
+	.BYTE	33,240,63		; Цвет символа
+	.BYTE	33,241,60		; Цвет знакоместа 0
+	.BYTE	33,242,60		; Цвет фона 0
+	.BYTE	14			; Clear screen
+	.BYTE	33,131,40,53		; Курсор в позицию для написания ревизии и даты
+.INCLUDE /VERSIO.MAC/
+	.BYTE	0
+	.EVEN
+
+; Подпрограмма: Печать строки: R1 = адрес строки, строка завершается 0; портит R0
+PRINT:
+PR0:	MOVB	(R1)+, R0		; Конец строки?
+	BEQ	PR2			; да => завершаем
+PR1:	TSTB	@#177564		; Источник канала 0 готов?
+	BPL	PR1			; нет => ждём
+	MOV	R0, @#177566		; передаём символ в канал 0
+	BR	PR0
+PR2:	RETURN
+
+;Подпрограмма: пауза после очистки экрана чтобы ПП закончил работу
+PAUSE:	; Pause to let PPU finish the previous commands
+	MOV	#177777, R5
+PAUSE0:	NOP
+	SOB	R5, PAUSE0
+	RETURN
+
+	
+; Routine: Sound
+LB203:
+	RETURN ;STUB
+
+; Text for Title Screen
+LB21E:	.WORD	106716
+	.BYTE	130,212,121,145,144,130,137,142,115,123,137,143,144,121,115,140	; AUTHOR
+	.BYTE	121,136,121,151,131,212,377,000
+	.WORD	124533
+	.BYTE	131,312,137,140,144,131,137,136,143,377
+	.WORD	127127
+	.BYTE	131,301,212,033,025,051,022,037,021,042,024,377			; 1 KEYBOARD
+	.WORD	130325
+	.BYTE	131,302,212,031,036,044,025,042,026,021,023,025,015,002,377,000 ; 2 INTERFACE 2
+	.WORD	131523
+	.BYTE	132,303,212,033,025,035,040,043,044,037,036,377			; 3 KEMPSTON
+	.WORD	132721
+	.BYTE	132,304,212,040,042,037,044,025,033,014,021,027,026,377		; 4 PROTEK/AGF
+	.WORD	135315
+	.BYTE	132,305,212,031,036,026,037,042,035,021,044,031,037,036,377,000	; 5 INFORMATION
+	.WORD	136513
+	.BYTE	132,306,212,024,025,035,037,036,043,044,042,021,044,031,037,036,377,000	; 6 DEMONSTRATION
+	.WORD	137711
+	.BYTE	132,307,212,043,044,021,042,044,015,027,021,035,025,377		; 7 START GAME
+	.WORD	142304
+	.BYTE	132,212,123,137,140,151,142,131,127,130,144,115,101,111,110,105	; COPYRIGHT 1985 VORTEX SOFTWARE
+	.BYTE	115,146,137,142,144,125,150,115,143,137,126,144,147,121,142,125,212,376
+	.EVEN
+
+; Routine: Prepare shadow screen
+LB2DA:	MOV	#LD900, R3	; B2DA	LD HL,$D900	
+				; B2DD	LD DE,$D901
+	CLR	R0		; B2E0	LD (HL),$00
+;	MOV #177777,R0;DEBUG		
+	MOV	#3500., R1	; B2E2	LD BC,$1B58
+1$:	MOV	R0, (R3)+	; B2E5	LDIR
+	SOB	R1, 1$
+	MOV	#LDF00, R3	; B2E7	LD HL,$DF00	
+	MOV	R3, R2		; B2EA	LD D,H	
+				; B2EB	LD E,L	
+	MOV	#L7100, R4	; B2EC	LD IX,$7100	
+	MOV	#8., R1		; B2F0	LD B,$08	
+LB2F2:	PUSH	R1		; B2F2	PUSH BC
+	MOVB	10(R4), R0	; B2F3	LD A,(IX+$08)	
+	MOVB	R0, (R2)+	; B2F6	LD (DE),A	
+				; B2F7	INC DE	
+	MOVB	(R4)+, R0	; B2F8	LD A,(IX+$00)	
+	MOVB	R0, (R2)+	; B2FB	LD (DE),A	
+				; B2FC	INC DE	
+	MOV	#30.,R1		; B2FD	LD BC,$001E	
+2$:	MOVB	(R3)+, (R2)+	; B300	LDIR	
+	SOB	R1, 2$
+				; B302	INC IX	
+	INC	R3		; B304	INC HL	
+	INC	R3		; B305	INC HL	
+	POP	R1		; B306	POP BC	
+	SOB	R1, LB2F2	; B307	DJNZ $B2F2	
+	SUB	#256., R3	; B309	DEC H	
+	MOV	#10500, R1	; B30A	LD BC,$1140	
+3$:	MOVB	(R3)+, (R2)+	; B30D	LDIR	
+	SOB	R1, 3$		
+	MOV	#LDF00, R3	; B30F	LD HL,$DF00	
+	MOV	#<LDF00+1>, R2	; B312	LD DE,$DF01	
+	MOVB	#377, (R3)	; B315	LD (HL),$FF	
+	MOV	#31., R1	; B317	LD BC,$001F	
+4$:	MOVB	(R3)+, (R2)+	; B31A	LDIR	
+	SOB	R1, 4$
+	MOV	#LDF00, R3	; B31C	LD HL,$DF00	
+	MOV	#<LDBC0+5504.>, R2	; B31F	LD DE,$F140	
+	MOV	#32., R1	; B322	LD BC,$0020	
+5$:	MOVB	(R3)+, (R2)+	; B325	LDIR	
+	SOB	R1, 5$
+	MOV	#<LDF00+32.>, R3	; B327	LD HL,$DF20	
+	MOV	#31., R2	; B32A	LD DE,$001F	
+	MOV	#146., R1	; B32D	LD B,$92	
+LB32F:	BISB	#1, (R3)	; B32F	LD A,(HL)	
+				; B330	OR $80	
+				; B332	LD (HL),A	
+	ADD	R2, R3		; B333	ADD HL,DE	
+	BISB	#200, (R3)+	; B334	LD A,(HL)	
+				; B335	OR $01	
+				; B337	LD (HL),A	
+				; B338	INC HL	
+	SOB	R1, LB32F	; B339	DJNZ $B32F	
+	RETURN			; B33B	RET	
+
+; Routine: Prepare screen
+LB39A:	;STUB
+; Copy shadow screen to the real screen, 256. x 192. pixels
+LB3A9:
+	MOV	#LDBC0, R3
+;	MOV	#LDF00, R3 ;DEBUG
+	MOV	#105504, R2
+	MOV	#192., R0		; Количество копируемых строк
+	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+1$:	PUSH	R0
+	MOV	#32., R1		; Счётчик байт по строке
+2$:	MOVB	(R3)+, R0		; берём байт
+	BIC    	#177400, R0		; оставляем младший байт
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	R0, (R5)		; Пишем в экран
+	INC	R2
+	SOB	R1, 2$
+	ADD	#<80.-32.>, R2		; К следующей строке
+	POP	R0
+	SOB	R0, 1$			; продолжаем цикл по строкам
+	RETURN
+
+; Print Small Font Signs on the Info Screen
+LB52D:
+	RETURN ;STUB
+
+; Info Screen Text
+LB7B5:	.WORD	112513
+	.BYTE	212,121,145,144,137,116,146,137,142,144,137,136,143,212,377,000	; AUTO-VORTONS
+	.WORD	120720
+	.BYTE	131,212,134,121,143,125,142,144,142,137,136,212,377,000		; LASERTRON
+	.WORD	123305
+	.BYTE	131,212,135,121,131,136,115,146,137,142,144,137,136,212,377,000	; MAIN VORTON
+	.WORD	130307
+	.BYTE	132,212,151,137,145,142,115,135,131,143,143,131,137,136,212,377	; YOUR MISSION
+	.WORD	125730
+	.BYTE	131,212,123,137,136,144,142,137,134,143,212,377			; CONTROLS
+	.WORD	130330
+	.BYTE	131,101,377,000							; I
+	.WORD	130335
+	.BYTE	131,137,377,000							; O
+	.WORD	131530
+	.BYTE	132,141,377,000							; Q
+	.WORD	131535
+	.BYTE	132,140,377,000							; P
+	.WORD	132730
+	.BYTE	132,152,377,000							; Z
+	.WORD	132732
+	.BYTE	132,135,377,000							; M
+	.WORD	132735
+	.BYTE	132,112,377,000							; ' '
+	.WORD	134130
+	.BYTE	132,130,377,000							; H
+	.WORD	135330
+	.BYTE	132,121,377,000							; A
+	.WORD	135332
+	.BYTE	132,127,377,000							; G
+	.WORD	142307
+	.BYTE	132,212,140,142,125,143,143,115,121,136,151,115,133,125,151,115	; PRESS ANY KEY
+	.BYTE	147,130,125,136,115,142,125,121,124,151,212,377			; WHEN READY
+	.WORD	105512
+	.BYTE	130,312,130,131,127,130,147,121,151,115,115,125,136,123,137,145 ; HIGHWAY
+	.BYTE	136,144,125,142,312,377						; ENCOUNTER
+	.WORD	106710
+	.BYTE	130,212,123,134,121,143,143,131,126,131,125,124,115,131,136,126 ; CLASSIFIED
+	.BYTE	137,142,135,121,144,131,137,136,212,376				; INFORMATION
+	.EVEN
+
+; Routine: Print Text
+LB890:
+	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+;NOTE: I removed the first pass needed to fill in screen attributes
+;NOTE: I added even address alignment after byte 377
+LB8BB:	MOV	(R3)+, R2	; B8BB	LD D,(HL)	
+				; B8BC	INC HL	
+				; B8BD	LD E,(HL)	
+				; B8BE	INC HL	
+	INC	R3		; B8BF	INC HL	
+LB8C0:	MOVB	(R3)+, R0	; B8C0	LD A,(HL)	
+	BIC    	#177400, R0	; B8C1	INC HL	
+	CMP	R0, #254.	; B8C2	CP $FE	
+	BLO	LB8C9		; B8C4	JR C,$B8C9	
+	BNE	1$		
+	RETURN                  ; B8C6	RET Z	
+1$:	BIT	#1, R3
+	BEQ	LB8BB
+	INC	R3			; Alignment to an even address
+	BR	LB8BB		; B8C7	JR $B8BB
+LB8C9:	BIC	#177700, R0	; B8C9	AND $3F	
+	PUSH	R3		; B8CB	PUSH HL	
+	MOV	R0, R3		; B8CC	LD L,A	
+				; B8CD	LD H,$00	
+				; B8CF	PUSH HL	
+	ASL	R3		; B8D0	ADD HL,HL	
+	ASL	R3		; B8D1	ADD HL,HL	
+				; B8D2	POP BC	
+	ADD	R0, R3		; B8D3	ADD HL,BC	HL <- HL * 5
+	ADD	#L5B00, R3	; B8D4	LD BC,$5B00	
+				; B8D7	ADD HL,BC	
+	PUSH	R2		; B8D8	PUSH DE	
+				; B8D9	XOR A	
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	#000, (R5)	; B8DA	LD (DE),A	write to the screen
+				; B8DB	LD A,$7F	
+	ADD	#000120, R2	; B8DD	INC D		next line
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	#177, (R5)	; B8DE	LD (DE),A	write to the screen
+	ADD	#000120, R2	; B8DF	INC D		next line
+	MOV	#5, R1		; B8E0	LD B,$05	counter = 5
+LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)	
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	R0, (R5)	; B8E3	LD (DE),A	write to the screen
+	ADD	#000120, R2	; B8E4	INC D		next line
+				; B8E5	INC HL	
+	SOB	R1, LB8E2	; B8E6	DJNZ $B8E2	repeat
+				; B8E8	LD A,$7F	
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	#177, (R5)	; B8EA	LD (DE),A	write to the screen
+	POP	R2		; B8EB	POP DE	
+	INC	R2		; B8EC	INC DE		next position on the screen
+	POP	R3		; B8ED	POP HL	
+	BR	LB8C0		; B8EE	JR $B8C0	
+
+
+.INCLUDE /SPRITE.MAC/
+
+LD900:	.BLKB	704.
+
+; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
+LDBC0:	.BLKB	832.
+LDF00:	.BLKB	<6144.-832.>
+	.BLKB	152.
+
+	.EVEN
+STACK::	.BLKW	100			; For stack
+
+	.END	START

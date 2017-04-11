@@ -1,0 +1,8 @@
+; tap2sna.py file for Highway Encounter. Run:
+;
+;   $ tap2sna.py @highwayencounter.t2s
+;
+; to create a Z80 snapshot.
+
+http://www.worldofspectrum.org/pub/sinclair/games/h/HighwayEncounter.tap.zip
+highwayencounter.z80
