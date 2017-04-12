@@ -17,7 +17,11 @@ START::
 	CALL	PRINT
 	CALL	PAUSE			; подождём пока очистится экран
 
-	CALL	LB4D0	; Show Info Screen
+;	CALL	LB4D0	; Show Info Screen
+
+1$:	CALL	LB0DE	; Start point
+	CALL	PAUSE
+	BR	1$
 	
 	HALT
 
@@ -125,16 +129,16 @@ L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
 	MOVB	(R2)+, R1	; 99DB	LD C,(HL)	Get mask byte 2
 				; 99DC	INC HL	
 				; 99DD	SCF	
-	ASRB	R1		; 99DE	RL C	Shift by 1
+	ASRB	R1		; 99DE	RL C		Shift by 1
 	ROR	R0		; 99E0	RL B
 				; 99E2	RLA
-	ASRB	R1		; 99E3	RL C	Shift by 2
+	ASRB	R1		; 99E3	RL C		Shift by 2
 	ROR	R0		; 99E5	RL B
 				; 99E7	RLA
-	ASRB	R1		; 99E8	RL C	Shift by 3
+	ASRB	R1		; 99E8	RL C		Shift by 3
 	ROR	R0		; 99EA	RL B
 				; 99EC	RLA
-	ASRB	R1		; 99ED	RL C	Shift by 4
+	ASRB	R1		; 99ED	RL C		Shift by 4
 	ROR	R0		; 99EF	RL B
 				; 99F1	RLA
 				; 99F2	EX DE,HL	
@@ -152,16 +156,16 @@ L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
 				; 99FE	INC HL	
 				; 99FF	LD C,(HL)	
 				; 9A00	INC HL	
-	ASR	R1		; 9A01	SLA C	Shift by 1
+	ASR	R1		; 9A01	SLA C		Shift by 1
 	RORB	R0		; 9A03	RL B
 				; 9A05	RLA
-	ASR	R1		; 9A06	SLA C	Shift by 2
+	ASR	R1		; 9A06	SLA C		Shift by 2
 	RORB	R0		; 9A08	RL B
 				; 9A0A	RLA
-	ASR	R1		; 9A0B	SLA C	Shift by 3
+	ASR	R1		; 9A0B	SLA C		Shift by 3
 	RORB	R0		; 9A0D	RL B
 				; 9A0F	RLA
-	ASR	R1		; 9A10	SLA C	Shift by 4
+	ASR	R1		; 9A10	SLA C		Shift by 4
 	RORB	R0		; 9A12	RL B
 				; 9A14	RLA
 				; 9A15	EX DE,HL	
@@ -177,6 +181,70 @@ L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
 	SOB	R0, L99D5	; 9A21	DEC A	
 				; 9A22	JP NZ,$99D5	loop by sprite height
 	RETURN			; 9A25	RET	
+
+; Draw sprite with shift by 2px
+L9A26:
+	MOV	R1, R3		; 9A26	LD H,B	
+				; 9A27	LD L,C	
+	MOV	#24., R0	; 9A28	LD A,$18	
+L9A2A:	PUSH	R0		; 9A2A	EX AF,AF'	
+				; 9A2B	EX DE,HL	
+	MOV	(R2)+, R0	; 9A2C	LD A,(HL)	
+				; 9A2D	INC HL	
+				; 9A2E	LD B,(HL)	
+				; 9A2F	INC HL	
+	MOVB	(R2)+, R1	; 9A30	LD C,(HL)	
+				; 9A31	INC HL	
+				; 9A32	SCF	
+	ASRB	R1		; 9A33	RL C	
+	ROR	R0		; 9A35	RL B	
+				; 9A37	RLA	
+	ASRB	R1		; 9A38	RL C	
+	ROR	R0		; 9A3A	RL B	
+				; 9A3C	RLA	
+				; 9A3D	EX DE,HL	
+	BICB	R0, (R3)+	; 9A3E	AND (HL)	
+				; 9A3F	LD (HL),A	
+	SWAB	R0		; 9A40	LD A,B	
+				; 9A41	INC HL	
+	BICB	R0, (R3)+	; 9A42	AND (HL)	
+				; 9A43	LD (HL),A	
+				; 9A44	LD A,C	
+				; 9A45	INC HL	
+	BICB	R1, (R3)	; 9A46	AND (HL)	
+				; 9A47	LD (HL),A	
+	DEC	R3		; 9A48	DEC HL	
+	DEC	R3		; 9A49	DEC HL	
+				; 9A4A	EX DE,HL	
+	MOVB	(R2)+, R0	; 9A4B	LD A,(HL)	
+				; 9A4C	INC HL	
+	MOV	(R2)+, R1	; 9A4D	LD B,(HL)	
+				; 9A4E	INC HL	
+				; 9A4F	LD C,(HL)	
+				; 9A50	INC HL	
+	ASR	R1		; 9A51	SLA C	
+	RORB	R0		; 9A53	RL B	
+				; 9A55	RLA	
+	ASR	R1		; 9A56	SLA C	
+	RORB	R0		; 9A58	RL B	
+				; 9A5A	RLA	
+				; 9A5B	EX DE,HL	
+	BISB	R0, (R3)+	; 9A5C	OR (HL)	
+				; 9A5D	LD (HL),A	
+				; 9A5E	LD A,B	
+				; 9A5F	INC HL	
+	BISB	R1, (R3)+	; 9A60	OR (HL)	
+				; 9A61	LD (HL),A	
+	SWAB	R1		; 9A62	LD A,C	
+				; 9A63	INC HL	
+	BISB	R1, (R3)	; 9A64	OR (HL)	
+				; 9A65	LD (HL),A	
+	SUB	#34., R3	; 9A66	LD BC,$FFDE	
+				; 9A69	ADD HL,BC	
+	POP	R0		; 9A6A	EX AF,AF'	
+	SOB	R0, L9A2A	; 9A6B	DEC A	
+				; 9A6C	JP NZ,$9A2A	
+	RETURN			; 9A6F	RET	
 
 ; Draw sprite with no shift
 L9A70:	MOV	R1, R3		; 9A70	LD H,B	
@@ -218,7 +286,32 @@ L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)
 				; 9A97	LD B,A	
 	SOB	R1, L9A74	; 9A98	DJNZ $9A74	
 	RETURN			; 9A9A	RET	
-	
+
+; Start point?
+LB0DE:
+		; B0DE	LD BC,$F300
+LB0E1:
+		; B0E1	LD HL,$785A	
+		; B0E4	CALL $B203	Sound
+		; B0E7	XOR A	
+		; B0E8	IN A,($FE)	
+		; B0EA	CPL	
+		; B0EB	AND $1F	
+		; B0ED	JR NZ,$B0E7	
+	CALL	LB2DA		; B0EF	CALL $B2DA	Prepare shadow screen
+	MOV	#0, LB4CF	; B0F2	XOR A	
+				; B0F3	LD ($B4CF),A	
+	CALL	LB39A		; B0F6	CALL $B39A	Prepare screen with attributes
+	MOV	#104, LB4CF	; B0F9	LD A,$44	
+				; B0FB	LD ($B4CF),A	
+	CALL	LB39A		; B0FE	CALL $B39A	Prepare screen with attributes
+	CALL	LB33C		; B101	CALL $B33C	"HIGHWAY ENCOUNTER" big sign
+	MOV	#LB21E, R3	; B104	LD HL,$B21E	
+	CALL	LB890		; B107	CALL $B890	Print Text
+	;TODO
+
+	RETURN ;STUB
+
 ; Routine: Sound
 LB203:
 	RETURN ;STUB
@@ -305,6 +398,42 @@ LB32F:	BISB	#1, (R3)	; B32F	LD A,(HL)
 	SOB	R1, LB32F	; B339	DJNZ $B32F	
 	RETURN			; B33B	RET	
 
+LB33C:	MOV	#LB499, R3		; B33C	LD HL,$B499	"HIGHWAY ENCOUNTER" pixels address
+	MOV	#LD900, R2		; B33F	LD DE,$D900	title sign buffer
+	MOV	#50., R1		; B342	LD BC,$0032	50 bytes
+1$:	MOVB	(R3)+, (R2)+		; B345	LDIR		copy
+	MOV	#<LDF00+22.>, R1	; B347	LD BC,$DF16	address on shadow screen
+	MOVB	#8., R0			; B34A	LD A,$08	
+	MOV	#LD900, R3		; B34C	LD HL,$D900	title sign buffer
+	CALL	LB3D8			; B34F	CALL $B3D8	
+	MOV	#<LDF00+119.>, R1	; B352	LD BC,$DF77	
+	MOVB	#16., R0		; B355	LD A,$10	
+	CALL	LB3D8			; B357	CALL $B3D8	
+	MOV	#<LDF00+216.>, R1	; B35A	LD BC,$DFD8	
+	MOVB	#24., R0		; B35D	LD A,$18	
+	CALL	LB3D8			; B35F	CALL $B3D8	
+	MOV	#<LDF00+312.>, R1	; B362	LD BC,$E038	
+	CLRB	R0			; B365	LD A,$00	
+	CALL	LB3D8			; B367	CALL $B3D8	
+	MOV	#<LDF00+409.>, R1	; B36A	LD BC,$E099	
+	MOVB	#8., R0			; B36D	LD A,$08	
+	CALL	LB3D8			; B36F	CALL $B3D8	
+	MOV	#<LDF00+603.>, R1	; B372	LD BC,$E15B	
+	MOVB	#24., R0		; B375	LD A,$18	
+	CALL	LB3D8			; B377	CALL $B3D8	
+	MOV	#<LDF00+699.>, R1	; B37A	LD BC,$E1BB	
+	CLRB	R0			; B37D	LD A,$00	
+	CALL	LB3D8			; B37F	CALL $B3D8	
+	MOV	#<LDF00+796.>, R1	; B382	LD BC,$E21C	
+	MOVB	#8., R0			; B385	LD A,$08	
+	CALL	LB3D8			; B387	CALL $B3D8	
+	MOV	#<LDF00+893.>, R1	; B38A	LD BC,$E27D	
+	MOVB	#16., R0		; B38D	LD A,$10	
+	CALL	LB3D8			; B38F	CALL $B3D8	
+	MOV	#<LDF00+990.>, R1	; B392	LD BC,$E2DE	
+	MOVB	#24., R0		; B395	LD A,$18	
+	CALL	LB3D8			; B397	CALL $B3D8	
+;
 ; Routine: Prepare screen
 LB39A:	;STUB
 ; Copy shadow screen to the real screen, 256. x 192. pixels
@@ -327,36 +456,158 @@ LB3A9:
 	SOB	R0, 1$			; продолжаем цикл по строкам
 	RETURN
 
+; Routine
+LB3D8:	MOV	#LBFB0, LB4CD		; B3D8	LD DE,$BFB0	Mask and sprite = BFB0
+					; B3DB	LD ($B4CD),DE	-- Pyramid block appears, phase 1
+	CALL	LB41B			; B3DF	CALL $B41B	
+	MOV	#LB980, LB4CD		; B3E2	LD DE,$B980	Mask and sprite = B980
+					; B3E5	LD ($B4CD),DE	-- Pyramid block appears, phase 2
+	CALL	LB41B			; B3E9	CALL $B41B	
+	MOV	#LBA10, LB4CD		; B3EC	LD DE,$BA10	Mask and sprite = BA10
+					; B3EF	LD ($B4CD),DE	-- Pyramid block appears, phase 3
+	CALL	LB41B			; B3F3	CALL $B41B	
+	MOV	#LB8F0, LB4CD		; B3F6	LD DE,$B8F0	Mask and sprite = B8F0
+					; B3F9	LD ($B4CD),DE	-- Pyramid block used on the title screen
+	CALL	LB427			; B3FD	CALL $B427	
+	ADD	#5, R3			; B400	LD DE,$0005	
+					; B403	ADD HL,DE	
+	PUSH	R3			; B404	PUSH HL	
+	MOV	#<LDF00+32.>, R3	; B405	LD HL,$DF20	
+	MOV	#31., R2		; B408	LD DE,$001F	
+	MOV	#130., R1		; B40B	LD B,$82	
+LB40D:	BISB	#1, (R3)		; B40D	LD A,(HL)	
+					; B40E	OR $80	
+					; B410	LD (HL),A	
+	ADD	R2, R3			; B411	ADD HL,DE	
+	BISB	#200, (R3)+		; B412	LD A,(HL)	
+					; B413	OR $01	
+					; B415	LD (HL),A	
+					; B416	INC HL	
+	SOB	R1, LB40D		; B417	DJNZ $B40D	
+	POP	R3			; B419	POP HL	
+	RETURN				; B41A	RET	
 
+; Routine
+; Used by the routine at B3D8
+LB41B:
+		; B41B	EX AF,AF'	
+		; B41C	XOR A	
+		; B41D	IN A,($FE)	
+		; B41F	CPL	
+		; B420	AND $1F	
+		; B422	JR Z,$B426	
+		; B424	EX AF,AF'	
+		; B425	RET	
+		; B426	EX AF,AF'
+; This entry point is used by the routine at B3D8
+; A = 0 / 8. / 16. / 24.
+LB427:
+	PUSH	R3		; B427	PUSH HL	
+	PUSH	R1		; B428	PUSH BC	
+	PUSH	R0		; B429	PUSH AF	
+	MOV	R3, LB4CB	; B42A	LD ($B4CB),HL	save HL
+	ADD	#4, R3		; B42D	INC L	
+				; B42E	INC L	
+				; B42F	INC L	
+				; B430	INC L	
+	MOVB	#36., R2	; B431	LD E,$24	Loop counter = 36
+LB433:	PUSH	R2		; B433	PUSH DE		save loop counter
+	BITB	#1, (R3)	; B434	BIT 0,(HL)	
+	BEQ	LB463		; B436	JR Z,$B463	
+	MOVB	R0, R3		; B438	LD E,A	
+				; B439	LD D,$00	
+	ADD	#LB446, R3	; B43B	LD HL,$B446	
+				; B43E	ADD HL,DE	
+	PUSH	R0		; B43F	PUSH AF	
+	PUSH	R1		; B440	PUSH BC	
+	MOV	LB4CD, R2	; B441	LD DE,($B4CD)	Get mask and sprite address
+	JMP	(R3)		; B445	JP (HL)	
+LB446:	CALL	L9933		; B446	CALL $8F85	0. -- JP 9933 Draw sprite with shift by -2px
+	BR	LB461		; B449	JP $B461	
+	NOP			; B44C	NOP	
+				; B44D	NOP	
+	CALL	L9A70		; B44E	CALL $8F82	8. -- JP 9A70 Draw sprite with no shift
+	BR	LB461		; B451	JP $B461	
+	NOP			; B454	NOP	
+				; B455	NOP	
+	CALL	L9A26		; B456	CALL $8F7F	16. -- JP 9A26 Draw sprite with shift by 2px
+	BR	LB461		; B459	JP $B461	
+	NOP			; B45C	NOP	
+				; B45D	NOP	
+	CALL	L99D1		; B45E	CALL $8F7C	24. -- JP 99D1 Draw sprite with shift by 4px
+LB461:	POP	R1		; B461	POP BC	
+	POP	R0		; B462	POP AF	
+LB463:	MOV	#96., R3	; B463	LD HL,$0060	
+	ADD	R1, R3		; B466	ADD HL,BC	
+	MOV	R3, R1		; B467	LD C,L	
+				; B468	LD B,H	
+	ADD	#24., R0	; B469	ADD A,$18	
+	CMP	R0, #32.	; B46B	CP $20	
+	BLO	LB472		; B46D	JR C,$B472	
+	BIC	#177740, R0	; B46F	AND $1F	
+	DEC	R1		; B471	DEC BC	
+LB472:	MOV	LB4CB, R3	; B472	LD HL,($B4CB)	restore HL
+	RORB	(R3)+		; B475	RR (HL)	
+				; B477	INC L	
+	RORB	(R3)+		; B478	RR (HL)	
+				; B47A	INC L	
+	RORB	(R3)+		; B47B	RR (HL)	
+				; B47D	INC L	
+	RORB	(R3)+		; B47E	RR (HL)	
+				; B480	INC L	
+	RORB	(R3)		; B481	RR (HL)	
+	POP	R2		; B483	POP DE		restore loop counter
+	SOB	R2, LB433	; B484	DEC E	
+				; B485	JR NZ,$B433	loop
+	CALL	LB3A9		; B487	CALL $B3A9	Prepare screen
+	MOV	#LB499, R3	; B48A	LD HL,$B499	
+	MOV	#LD900, R2	; B48D	LD DE,$D900	
+	MOVB	#50., R1	; B490	LD BC,$0032	
+1$:	MOVB	(R3)+, (R2)+	; B493	LDIR	
+	SOB	R1, 1$
+	POP	R0		; B495	POP AF	
+	POP	R1		; B496	POP BC	
+	POP	R3		; B497	POP HL	
+	RETURN			; B498	RET	
+
+LB499:	.BYTE	000,127,165,127,120, 000,122,105,125,120
+	.BYTE	000,162,127,167,160, 000,122,125,165,040
+	.BYTE	000,127,165,125,040, 007,167,165,167,167
+	.BYTE	004,124,125,122,105, 007,124,125,122,167
+	.BYTE	004,124,125,122,106 ,007,127,167,122,165
+        .EVEN
+
+LB4CB:	.WORD	0		; Temporary place for HL
+LB4CD:	.WORD	LB8F0		; Mask and Sprite address
 LB4CF:	.BYTE	104		; Attribute?
         .EVEN
 	
 ; Show Info Screen
-LB4D0:	MOVB	#6, LB4CF	; B4D0	LD A,$06	
-				; B4D2	LD ($B4CF),A	
-	CALL	LB2DA		; B4D5	CALL $B2DA	Prepare shadow screen
+LB4D0:	MOVB	#6, LB4CF		; B4D0	LD A,$06	
+					; B4D2	LD ($B4CF),A	
+	CALL	LB2DA			; B4D5	CALL $B2DA	Prepare shadow screen
 	MOV	#<LDBC0+1925.>, R1	; B4D8	LD BC,$E345	
-	MOV	#LC040, R2	; B4DB	LD DE,$C040	Sprite: Vorton looking forward
-	CALL	L9A70		; B4DE	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#LC040, R2		; B4DB	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70			; B4DE	CALL $8F82	JP 9A70 Draw sprite with no shift
 	MOV	#<LDBC0+2052.>, R1	; B4E1	LD BC,$E3C4	
-	MOV	#LC040, R2	; B4E4	LD DE,$C040	Sprite: Vorton looking forward
-	CALL	L9A70		; B4E7	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#LC040, R2		; B4E4	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70			; B4E7	CALL $8F82	JP 9A70 Draw sprite with no shift
 	MOV	#<LDBC0+2179.>, R1	; B4EA	LD BC,$E443	
-	MOV	#LC040, R2	; B4ED	LD DE,$C040	Sprite: Vorton looking forward
-	CALL	L9A70		; B4F0	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#LC040, R2		; B4ED	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70			; B4F0	CALL $8F82	JP 9A70 Draw sprite with no shift
 	MOV	#<LDBC0+2306.>, R1	; B4F3	LD BC,$E4C2	
-	MOV	#LC040, R2	; B4F6	LD DE,$C040	Sprite: Vorton looking forward
-	CALL	L9A70		; B4F9	CALL $8F82	JP 9A70 Draw sprite with no shift
+	MOV	#LC040, R2		; B4F6	LD DE,$C040	Sprite: Vorton looking forward
+	CALL	L9A70			; B4F9	CALL $8F82	JP 9A70 Draw sprite with no shift
 	MOV	#<LDBC0+2504.>, R1	; B4FC	LD BC,$E588	
-	MOV	#LD240, R2	; B4FF	LD DE,$D240	Sprite: Lasertron
-	CALL	L9933		; B502	CALL $8F85	JP 9933 Draw sprite with shift by -2px
+	MOV	#LD240, R2		; B4FF	LD DE,$D240	Sprite: Lasertron
+	CALL	L9933			; B502	CALL $8F85	JP 9933 Draw sprite with shift by -2px
 	MOV	#<LDBC0+2914.>, R1	; B505	LD BC,$E722	
-	MOV	#LD630, R2	; B508	LD DE,$D630	Sprite: Main Vorton looking at player
-	CALL	L99D1		; B50B	CALL $8F7C	JP 99D1 Draw sprite with shift by 4px
-	CALL	LB39A		; B50E	CALL $B39A	Prepare screen with attributes
-	CALL	LB52D		; B511	CALL $B52D	Print Small Font Signs
-	MOV	#LB7B5, R3	; B514	LD HL,$B7B5	
-	CALL	LB890		; B517	CALL $B890	Print Text
+	MOV	#LD630, R2		; B508	LD DE,$D630	Sprite: Main Vorton looking at player
+	CALL	L99D1			; B50B	CALL $8F7C	JP 99D1 Draw sprite with shift by 4px
+	CALL	LB39A			; B50E	CALL $B39A	Prepare screen with attributes
+	CALL	LB52D			; B511	CALL $B52D	Print Small Font Signs
+	MOV	#LB7B5, R3		; B514	LD HL,$B7B5	
+	CALL	LB890			; B517	CALL $B890	Print Text
 	;TODO
 
 	RETURN ;STUB
