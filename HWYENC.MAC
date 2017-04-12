@@ -497,14 +497,48 @@ LB33C:	MOV	#LB499, R3		; B33C	LD HL,$B499	"HIGHWAY ENCOUNTER" pixels address
 LB39A:	;STUB
 ; Copy shadow screen to the real screen, 256. x 192. pixels
 LB3A9:
-	MOV	#LDBC0, R3
-	MOV	#105504, R2
-	MOV	#192., R0		; Количество копируемых строк
 	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+	MOV	#105504, R2		; Адрес на реальном экране
+
+	MOV	#18., R0		; Количество верхних пустых строк
+10$:	MOV	#8., R1			; Счётчик по строке
+11$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	SOB	R1, 11$
+	ADD	#<80.-32.>, R2		; К следующей строке
+	SOB	R0, 10$
+
+	MOV	#<LDBC0+576.>, R3
+	MOV	#<192.-18.-19.>, R0	; Количество копируемых строк
 1$:	PUSH	R0
-	MOV	#32., R1		; Счётчик байт по строке
+	MOV	#8., R1			; Счётчик по строке
 2$:	MOVB	(R3)+, R0		; берём байт
+	BIC    	#177400, R0		; оставляем младший байт
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	R0, (R5)		; Пишем в экран
+	INC	R2
+	MOVB	(R3)+, R0		; берём байт
+	BIC    	#177400, R0		; оставляем младший байт
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	R0, (R5)		; Пишем в экран
+	INC	R2
+	MOVB	(R3)+, R0		; берём байт
+	BIC    	#177400, R0		; оставляем младший байт
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	MOV	R0, (R5)		; Пишем в экран
+	INC	R2
+	MOVB	(R3)+, R0		; берём байт
 	BIC    	#177400, R0		; оставляем младший байт
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Пишем в экран
@@ -513,9 +547,28 @@ LB3A9:
 	ADD	#<80.-32.>, R2		; К следующей строке
 	POP	R0
 	SOB	R0, 1$			; продолжаем цикл по строкам
+
+	MOV	#19., R0		; Количество нижних пустых строк
+30$:	MOV	#8., R1			; Счётчик по строке
+31$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+	CLR	(R5)			; Пишем в экран
+	INC	R2
+	SOB	R1, 31$
+	ADD	#<80.-32.>, R2		; К следующей строке
+	SOB	R0, 30$
+
 	RETURN
 
-; Routine
+; Routine for Title Screen
 LB3D8:	MOV	#LBFB0, LB4CD		; B3D8	LD DE,$BFB0	Mask and sprite = BFB0
 					; B3DB	LD ($B4CD),DE	-- Pyramid block appears, phase 1
 	CALL	LB41B			; B3DF	CALL $B41B	
@@ -674,6 +727,19 @@ LB4D0:	MOVB	#6, LB4CF		; B4D0	LD A,$06
 
 ; Print Small Font Signs on the Info Screen
 LB52D:
+;	MOV	#LB62C, R3		; B52D	LD HL,$B62C	Info Screen Small Font Signs
+;	PUSH	R3	; B530	PUSH HL	
+		; B531	LD D,(HL)	
+		; B532	INC HL	
+		; B533	LD E,(HL)	
+		; B534	INC HL	
+		; B535	INC HL	
+		; B536	LD C,$00	
+		; B538	DEC E	
+		; B539	LD A,(HL)	
+		; B53A	INC HL	
+		; B53B	CP $FE
+
 	RETURN ;STUB
 
 ; Info Screen Text
