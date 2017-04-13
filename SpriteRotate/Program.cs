@@ -23,6 +23,10 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessSmallFont(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             ProcessSprites7100(writer);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
@@ -61,6 +65,29 @@ namespace SpriteRotate
                     //
                 }
                 writer.WriteLine("\t; {0} {1}", EncodeOctalString((byte)tile), TileChars[tile]);
+            }
+        }
+
+        static void ProcessSmallFont(StreamWriter writer)
+        {
+            writer.WriteLine("; Small Font");
+            writer.Write("LB5D7:");
+            int addr = 0xB5D7;
+            for (int i = 0; i < 80; i++)
+            {
+                if ((i % 16) == 0)
+                    writer.Write("\t.BYTE\t");
+
+                byte b = memdmp[addr + i];
+                int bb = 0;
+                for (int j = 0; j < 8; j++)
+                    bb |= ((b >> (7 - j)) & 1) << j;
+
+                writer.Write(EncodeOctalString((byte)bb));
+                if ((i % 16) < 15)
+                    writer.Write(",");
+                else
+                    writer.WriteLine();
             }
         }
 

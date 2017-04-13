@@ -726,24 +726,147 @@ LB4D0:	MOVB	#6, LB4CF		; B4D0	LD A,$06
 	JMP	LB0E1			; B52A	JP $B0E1
 
 ; Print Small Font Signs on the Info Screen
-LB52D:
-;	MOV	#LB62C, R3		; B52D	LD HL,$B62C	Info Screen Small Font Signs
-;	PUSH	R3	; B530	PUSH HL	
-		; B531	LD D,(HL)	
-		; B532	INC HL	
-		; B533	LD E,(HL)	
-		; B534	INC HL	
-		; B535	INC HL	
-		; B536	LD C,$00	
-		; B538	DEC E	
-		; B539	LD A,(HL)	
-		; B53A	INC HL	
-		; B53B	CP $FE
-
-	RETURN ;STUB
+; NOTE: I removed the second pass used to fill attributes
+LB52D:	MOV	#LB62C, R3	; B52D	LD HL,$B62C	Info Screen Small Font Signs
+				; B530	PUSH HL	
+LB531:	MOV	(R3)+, R2	; B531	LD D,(HL)	
+				; B532	INC HL	
+				; B533	LD E,(HL)	
+				; B534	INC HL	
+				; B535	INC HL	
+	BIC	#177400, R1	; B536	LD C,$00	
+	DEC	R2		; B538	DEC E	
+LB539:	MOVB	(R3)+, R0	; B539	LD A,(HL)	
+	BIC	#177400, R0	; B53A	INC HL	
+	CMP	R0, #254.	; B53B	CP $FE
+	BLO	LB544		; B53D	JR C,$B544	
+	BEQ	LB5BB		; B53F	JP Z,$B5BB	
+	BR	LB531		; B542	JR $B531	
+LB544:	PUSH	R3		; B544	PUSH HL	
+	PUSH	R1		; B545	PUSH BC	
+	PUSH	R2		; B546	PUSH DE	
+	MOV	R0, R3		; B547	LD L,A	
+				; B548	LD H,$00	
+	ASR	R3		; B54A	SRL L	
+	PUSH	R3		; B54C	PUSH HL	
+	ASL	R3		; B54D	ADD HL,HL	
+	ASL	R3		; B54E	ADD HL,HL	
+	POP	R2		; B54F	POP BC	
+	ADD	R2, R3		; B550	ADD HL,BC	
+	ADD	#<LB5D7-150.>, R3	; B551	LD BC,$B541	
+				; B554	ADD HL,BC	
+	MOV	#LB627, R2	; B555	LD DE,$B627	temp storage
+	MOVB	#5, R1		; B558	LD BC,$0005	
+1$:	MOVB	(R3)+, (R2)+	; B55B	LDIR		copy
+	SOB	R1, 1$
+	MOV	#LB627, R3	; B55D	LD HL,$B627	
+	BIT	#1, R0		; B560	BIT 0,A		odd or even?	
+	BNE	LB56F		; B562	JR NZ,$B56F	odd => jump
+	MOVB	#5, R1		; B564	LD B,$05	
+LB566:	BICB	#340, (R3)+	; B566	LD A,$70	Оставляем младшие 4 бита
+				; B568	AND (HL)	
+				; B569	LD (HL),A	
+				; B56A	INC HL	
+	SOB	R1, LB566	; B56B	DJNZ $B566	
+	BR	LB57C		; B56D	JR $B57C	
+LB56F:	MOVB	#5, R1		; B56F	LD B,$05	
+LB571:	CLC
+	RORB	(R3)		; B571	SLA (HL)	
+	ASRB	(R3)		; B573	SLA (HL)	
+	ASRB	(R3)		; B575	SLA (HL)	
+	ASRB	(R3)+		; B577	SLA (HL)	
+				; B579	INC HL	
+	SOB	R1, LB571	; B57A	DJNZ $B571	
+LB57C:	POP	R2		; B57C	POP DE	
+	POP	R1		; B57D	POP BC	
+	PUSH	R1		; B57E	PUSH BC	
+	MOV	#LB627, R3	; B57F	LD HL,$B627	
+	BITB	#1, R1		; B582	BIT 0,C	
+	BEQ	LB5A3		; B584	JR Z,$B5A3	
+	PUSH	R2		; B586	PUSH DE	
+	MOV	R3, R2		; B587	EX DE,HL	
+	MOV	(SP), R3
+	MOV	R3, @#176640   		; Устанавливаем косвенный адрес
+	CLRB	@#176642	; B588	LD (HL),$00	
+	ADD	#80., R3	; B58A	INC H		next line
+	MOV	R3, @#176640
+	CLRB	@#176642	; B58B	LD (HL),$00	
+	ADD	#80., R3	; B58D	INC H		next line
+	MOVB	#5, R1		; B58E	LD B,$05	
+LB590:	MOVB	(R2)+, R0	; B590	LD A,(DE)	
+	ASL	R0		; B591	SRL A	
+	ASL	R0		; B593	SRL A	
+	ASL	R0		; B595	SRL A	
+	ASL	R0		; B597	SRL A	
+	MOV	R3, @#176640   		; Устанавливаем косвенный адрес
+	BIS	R0, @#176642	; B599	OR (HL)	
+				; B59A	LD (HL),A	
+	;INC	R2		; B59B	INC DE	
+	ADD	#80., R3	; B59C	INC H		next line
+	SOB	R1, LB590	; B59D	DJNZ $B590	
+	MOV	R3, @#176640   		; Устанавливаем косвенный адрес
+	CLRB	@#176642	; B59F	LD (HL),$00	
+	BR	LB5B4		; B5A1	JR $B5B4	
+LB5A3:	INC	R2		; B5A3	INC DE	
+	PUSH	R2		; B5A4	PUSH DE	
+	MOV	R2, @#176640   		; Устанавливаем косвенный адрес
+	CLR	@#176642	; B5A5	XOR A	
+				; B5A6	LD (DE),A	
+	ADD	#80., R2	; B5A7	INC D		next line
+	MOV	R2, @#176640   		; Устанавливаем косвенный адрес
+	CLR	@#176642	; B5A8	LD (DE),A	
+	ADD	#80., R2	; B5A9	INC D		next line
+	MOVB	#5, R1		; B5AA	LD B,$05	
+LB5AC:	MOVB	(R3)+, R0	; B5AC	LD A,(HL)	
+	BIC	#177400, R0
+	MOV	R2, @#176640   		; Устанавливаем косвенный адрес
+	MOV	R0, @#176642	; B5AD	LD (DE),A	
+				; B5AE	INC HL	
+	ADD	#80., R2	; B5AF	INC D		next line
+	SOB	R1, LB5AC	; B5B0	DJNZ $B5AC	
+	MOV	R2, @#176640   		; Устанавливаем косвенный адрес
+	CLR	@#176642	; B5B2	XOR A	
+				; B5B3	LD (DE),A	
+LB5B4:	POP	R2		; B5B4	POP DE	
+	POP	R1		; B5B5	POP BC	
+	POP	R3		; B5B6	POP HL	
+	INC	R1		; B5B7	INC C	
+	BR	LB539		; B5B8	JP $B539	
+LB5BB:				; B5BB	POP HL	
+	RETURN
+LB627:	.BLKB	5
+	.EVEN
+LB62C:	.WORD	113714
+	.ASCII	/PROGRAMMED@TO@PUSH@THE@LASERTRON@/
+	.BYTE	377
+	.WORD	115114
+	.ASCII	/@AND@PROVIDE@BACKUP@FOR@THE@MAIN@VORTON@@/
+	.BYTE	377
+	.WORD	120720
+	.ASCII	/YOUR@ULTRA@POWERFUL@WEAPON@/
+	.BYTE	377
+	.WORD	122120
+	.ASCII	/@ACTIVATED@ONLY@IN@ZONE@ZERO@/
+	.BYTE	377
+	.WORD	125705
+	.ASCII	/UNDER@YOUR@DIRECT@CONTROL/
+	.BYTE	377
+	.WORD	127105
+	.ASCII	/@USE@HIM@TO@CLEAR@THE@WAY@AHEAD@@/
+	.BYTE	377
+	.WORD	132707
+	.ASCII	/TAKE@THE@LASERTRON@BEYOND/
+	.BYTE	377
+	.WORD	134107
+	.ASCII	/@ZONE@ZERO@TO@ENCOUNTER@AND/
+	.BYTE	377
+	.WORD	135307
+	.ASCII	/DESTROY@THE@ALIEN@STRONGHOLD@@/
+	.BYTE	376
+	.EVEN
 
 ; Info Screen Text
-LB7B5:	.WORD	112515
+LB7B5:	.WORD	112514
 	.BYTE	130,212,121,145,144,137,116,146,137,142,144,137,136,143,212,377	; AUTO-VORTONS
 	.WORD	117520
 	.BYTE	131,212,134,121,143,125,142,144,142,137,136,212,377,000		; LASERTRON
@@ -785,11 +908,11 @@ LB7B5:	.WORD	112515
 	.EVEN
 
 ; Routine: Print Text
+;NOTE: I removed the first pass needed to fill in screen attributes
+;NOTE: I added even address alignment after byte 377
 LB890:
 	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
-;NOTE: I removed the first pass needed to fill in screen attributes
-;NOTE: I added even address alignment after byte 377
 LB8BB:	MOV	(R3)+, R2	; B8BB	LD D,(HL)	
 				; B8BC	INC HL	
 				; B8BD	LD E,(HL)	
