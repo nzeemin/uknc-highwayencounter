@@ -12,6 +12,7 @@
 	.=001000
 START::
 	CLR	@#177560
+	MOV	SP, OSTACK		; Сохраняем начальное значение SP
 
 	MOV	#GAMESC, R1		; Строка для подготовки игрового экрана
 	CALL	PRINT
@@ -23,14 +24,30 @@ START::
 	CALL	PAUSE
 ;	BR	1$
 	
-	HALT
+;	HALT
 
+FINISH:
+	MOV	OSTACK, SP	; Восстанавливаем стек
+	MOV	#EXITSC, R1	; Строка очистки экрана перед выходом
+	CALL	PRINT
+	.EXIT
+
+OSTACK:	.WORD	40000		; Начальное значение SP
 GAMESC:	; Строка подготовки игрового экрана
 	.BYTE	33,246,62		; Формат экрана 40x24
 	.BYTE	33,240,63		; Цвет символа
 	.BYTE	33,241,60		; Цвет знакоместа 0
 	.BYTE	33,242,60		; Цвет фона 0
 	.BYTE	14			; Clear screen
+	.BYTE	0
+	.EVEN
+EXITSC:	; Строка очистки экрана перед выходом
+	.BYTE	33,246,061	; Формат экрана 80x24
+	.BYTE	33,240,67	; Цвет символа
+	.BYTE	33,241,61	; Цвет знакоместа 1
+	.BYTE	33,242,61	; Цвет фона 1
+	.BYTE	14		; Очистить экран
+	.ASCII	/BYE!/
 	.BYTE	0
 	.EVEN
 
@@ -65,15 +82,17 @@ WTKEY:	TSTB	@#177560
 
 ;------------------------------------------------------------------------------
 
-L8A00:
+L7B00:	.BLKB	3840.
 
-L8A08:
+L8A00:	.BLKB	8.
 
-L8A90:
+L8A08:	.BLKB	136.
+
+L8A90:	.BLKB	1136.
 
 ; Variables
 L8F00:	.BYTE	001
-	.EVEN
+	.BYTE	0	; Filler
 L8F01:	.WORD	L8A00
 L8F03:	.WORD	5352
 L8F05:	.WORD	0
@@ -86,15 +105,14 @@ L8F16:	.BYTE	0
 L8F17:	.BYTE	206
 L8F18:	.BYTE	226
 L8F19:	.BYTE	326
-	.EVEN
+	.BYTE	0	; Filler
 L8F1A:	.WORD	6654
 L8F1C:	.BYTE	1
 L8F1D:	.BLKB	6.
 L8F23:	.BYTE	0
-	.EVEN
-;
+; Initial values for Variables
 L8F25:	.BYTE	001
-	.EVEN
+	.BYTE	0	; Filler
 L8F26:	.WORD	L8A00
 L8F29:	.WORD	5352
 L8F2A:	.WORD	0
@@ -107,21 +125,330 @@ L8F3B:	.BYTE	0
 L8F3C:	.BYTE	206
 L8F3D:	.BYTE	226
 L8F3E:	.BYTE	326
-	.EVEN
+	.BYTE	0	; Filler
 L8F3F:	.WORD	6654
 L8F41:	.BYTE	001
 L8F42:	.BYTE	000,000,000,000,000,000
 L8F48:	.BYTE	0
+;
+L8F4A:	.BLKB	47.
 	.EVEN
 
 L92CE:
 	RETURN ;STUB
 
-L9423:
-	RETURN ;STUB
+L9423:	RETURN ;STUB
+	MOV	#L8A00, R4	; 9423	LD IX,$8A00
+	MOVB	#14., 12(R4)	; 9427	LD (IX+$0A),$0E	
+	CLRB	6(R4)		; 942B	LD (IX+$06),$00	
+	MOV	#16., R2	; 942F	LD DE,$0010	
+	MOVB	#4, R1		; 9432	LD B,$04	
+L9434:	ADD	R2, R4		; 9434	ADD IX,DE	
+	MOV	#13., 12(R4)	; 9436	LD (IX+$0A),$0D	
+	MOV	#16., 6(R4)	; 943A	LD (IX+$06),$10	
+	SOB	R1, L9434	; 943E	DJNZ $9434	
+	MOV	#L8A90, R3	; 9440	LD HL,$8A90	
+	MOVB	#377, (R3)	; 9443	LD (HL),$FF	
+	MOV	#L7B00, R4	; 9445	LD IX,$7B00	
+	MOVB	#249., R1	; 9449	LD B,$F9	
+L944B:	PUSH	R1		; 944B	PUSH BC	
+	MOV	#L8F4A, R3	; 944C	LD HL,$8F4A	
+	MOVB	6(R4), R0	; 944F	LD A,(IX+$06)	
+	BIC	#177420, R0	; 9452	RES 4,A	
+	CMPB	R0, #11.	; 9454	CP $0B	
+	BLO	L945D		; 9456	JR C,$945D	
+	MOVB	#8., 6(R4)	; 9458	LD A,$08	
+				; 945A	LD (IX+$06),A	
+L945D:	MOV	#22., R2	; 945D	LD DE,$0016	
+	MOVB	6(R4), R0	; 9460	LD A,(IX+$06)	
+	BITB	#20, R0		; 9463	BIT 4,A	
+	BEQ	L9468		; 9465	JR Z,$9468	
+	ADD	R2, R3		; 9467	ADD HL,DE	
+L9468:	BIC	#177760, R0	; 9468	AND $0F	
+	ADD	R0, R0		; 946A	ADD A,A	
+				; 946B	LD E,A	
+	ADD	R0, R3		; 946C	ADD HL,DE	
+	MOVB	(R3)+, R0	; 946D	LD A,(HL)	
+	MOVB	R0, 5(R4)	; 946E	LD (IX+$05),A	
+				; 9471	INC HL	
+	MOVB	(R3), R0	; 9472	LD A,(HL)	
+	MOVB	R0, 13(R4)	; 9473	LD (IX+$0B),A	
+	MOV	R4, R2		; 9476	LD E,IXl	
+				; 9478	LD D,IXh	
+				; 947A	LD BC,$000D	
+	MOV	R2, R3		; 947D	LD H,D	
+				; 947E	LD L,E	
+	ADD	#13, R3		; 947F	ADD HL,BC	
+	MOV	#3, R1		; 9480	LD BC,$0003	
+1$:	MOVB	(R3)+, (R2)+	; 9483	LDIR	
+	SOB	R1, 1$
+	MOVB	14(R4), R0	; 9485	LD A,(IX+$0C)	
+	BIC	#177770, R0	; 9488	AND $07	
+	MOVB	R0, 7(R4)	; 948A	LD (IX+$07),A	
+	MOVB	10(R4), R0	; 948D	LD A,(IX+$08)	
+	CMP	R0, #5		; 9490	CP $05	
+	BHIS	L94A0		; 9492	JR NC,$94A0	
+	MOVB	6(R4), R0	; 9494	LD A,(IX+$06)	
+	BIC	#177420, R0	; 9497	RES 4,A	
+	CMPB	R0, 9.		; 9499	CP $09	
+	BHIS	L94A0		; 949B	JR NC,$94A0	
+	TSTB	R0		; 949D	AND A	
+	BNE	L94A4		; 949E	JR NZ,$94A4	
+L94A0:	CLRB	10(R4)		; 94A0	LD (IX+$08),$00	
+L94A4:	MOVB	(R4), R0	; 94A4	LD A,(IX+$00)	
+	BIC	#177400, R0
+	CMPB	R0, 376		; 94A7	CP $FE	
+	BHIS	L94EE		; 94A9	JP NC,$94EE	
+	MOV	R0, R2		; 94AC	LD E,A	
+				; 94AD	LD D,$00	
+	MOVB	2(R4), R3	; 94AF	LD L,(IX+$01)	
+	BIC	#177400, R3
+	SWAB	R3
+	BIS	1(R4), R3	; 94B2	LD H,(IX+$02)	
+	PUSH	R3		; 94B5	PUSH HL	
+	PUSH	R2		; 94B6	PUSH DE	
+	ADD	R2, R3		; 94B7	ADD HL,DE
+	ROR	R3		; 94B8	SRL H	
+				; 94BA	RR L	
+	ASL	R3		; 94BC	ADD HL,HL	
+	ASL	R3		; 94BD	ADD HL,HL	
+	ASL	R3		; 94BE	ADD HL,HL	
+	ASL	R3		; 94BF	ADD HL,HL	
+	ASL	R3		; 94C0	ADD HL,HL	
+	MOV	R3, R2		; 94C1	EX DE,HL	
+;	MOV	LFCC3, R3	; 94C2	LD HL,$FCC3	
+				; 94C5	AND A	
+	SUB	R2, R3	; 94C6	SBC HL,DE	
+	POP	R2		; 94C8	POP DE	
+		; 94C9	EX (SP),HL	
+		; 94CA	AND A	
+		; 94CB	SBC HL,DE	
+		; 94CD	SRL H	
+		; 94CF	RR L	
+		; 94D1	SRL H	
+		; 94D3	RR L	
+		; 94D5	SRL H	
+		; 94D7	RR L	
+	POP	R2		; 94D9	POP DE	
+		; 94DA	ADD HL,DE	
+		; 94DB	LD (IX+$03),L	
+		; 94DE	LD (IX+$04),H	
+		; 94E1	LD A,(IX+$01)	
+		; 94E4	SUB (IX+$00)	
+		; 94E7	AND $06	
+		; 94E9	SLA A	
+		; 94EB	LD (IX+$09),A	
+L94EE:		; 94EE	LD DE,$0010	
+		; 94F1	ADD IX,DE	
+	POP	R1		; 94F3	POP BC	
+	DEC	R1		; 94F4	DEC B	
+	BEQ	1$
+	JMP	L944B		; 94F5	JP NZ,$944B	
+1$:	RETURN			; 94F8	RET
 
+; Show the screen
 L95EF:
-	RETURN ;STUB
+;NOTE: 95EF..95FB code clears attributes -- removed
+	MOV	#<LD900+5>, R3	; 95FC	LD HL,$D905	
+	MOV	R3, R2		; 95FF	LD D,H	
+				; 9600	LD E,L	
+	MOV	#L7100, R4	; 9601	LD IX,$7100	
+	MOV	#8., R1		; 9605	LD B,$08	
+L9607:	PUSH	R1		; 9607	PUSH BC	
+	MOVB	10(R4), R0	; 9608	LD A,(IX+$08)	
+	MOVB	R0, (R2)+	; 960B	LD (DE),A	
+				; 960C	INC DE	
+	MOVB	(R4)+, R0	; 960D	LD A,(IX+$00)	
+	MOVB	R0, (R2)+	; 9610	LD (DE),A	
+				; 9611	INC DE	
+	MOV	#30., R1	; 9612	LD BC,$001E	
+1$:	MOVB	(R3)+, (R2)+	; 9615	LDIR	
+	SOB	R1, 1$
+				; 9617	INC IX	
+	INC	R3		; 9619	INC HL	
+	INC	R3		; 961A	INC HL	
+	POP	R1		; 961B	POP BC	
+	SOB	R1, L9607	; 961C	DJNZ $9607	
+	SUB	#256., R3	; 961E	DEC H	
+	MOV	#4352., R1	; 961F	LD BC,$1100	
+2$:	MOVB	(R3)+, (R2)+	; 9622	LDIR	
+	SOB	R1, 2$
+	MOV	#<LD900+283.>, R3	; 9624	LD HL,$DA1B	
+	CALL	L9633		; 9627	CALL $9633	Draw zone border
+	MOV	#<LDF00+1541.>, R3	; 962A	LD HL,$E505	
+	CALL	L9633		; 962D	CALL $9633	Draw zone border
+	JMP	L965D		; 9630	JP $965D	
+
+; Routine: Draw zone border
+L9633:	MOV	#5, R5		; 9633	LD C,$05	
+	MOV	#32., R2	; 9635	LD DE,$0020	
+L9638:	MOV	#<L7100+16.>, R4	; 9638	LD IX,$7110	
+	MOV	#4, R1		; 963C	LD B,$04	
+L963E:	MOVB	(R4)+, R0	; 963E	LD A,(IX+$00)	
+	MOVB	R0, (R3)	; 9641	LD (HL),A	
+				; 9642	INC IX	
+	ADD	R2, R3		; 9644	ADD HL,DE	
+	SOB	R1, L963E	; 9645	DJNZ $963E	
+	INC	R3		; 9647	INC HL	
+	MOV	#4, R1		; 9648	LD B,$04	
+L964A:	MOVB	(R4)+, R0	; 964A	LD A,(IX+$00)	
+	MOVB	R0, (R3)	; 964D	LD (HL),A	
+				; 964E	INC IX	
+	ADD	R2, R3		; 9650	ADD HL,DE	
+	SOB	R1, L964A	; 9651	DJNZ $964A	
+	INC	R3		; 9653	INC HL	
+	SOB	R5, L9638	; 9654	DEC C	
+				; 9655	JR NZ,$9638	
+	RETURN			; 9657	RET	
+
+L9658:	.BYTE	12.	; Current column height, in char-lines
+	.BYTE	0	; Filler
+L9659:	.WORD	0
+L965B:	.WORD	0
+
+L965D:	MOVB	#12., L9658	; 965D	LD A,$0C	
+				; 965F	LD ($9658),A	initial column height
+	MOV	L8F00, R0	; 9662	LD A,($8F00)	
+	MOV	R0, R3		; 9665	LD H,$00	
+				; 9667	LD L,A	
+	ASL	R3		; 9668	ADD HL,HL	
+	ASL	R3		; 9669	ADD HL,HL	
+	ASL	R3		; 966A	ADD HL,HL	
+	ASL	R3		; 966B	ADD HL,HL	
+	MOV	R3, R2		; 966C	LD D,H	
+				; 966D	LD E,L	
+	ASL	R3		; 966E	ADD HL,HL	
+	ADD	R2, R3		; 966F	ADD HL,DE	A * 48. -> HL
+	ADD	#L6AD0, R3	; 9670	LD DE,$6AD0	
+				; 9673	ADD HL,DE	
+	MOV	#<LD900+5>, R4	; 9674	LD IX,$D905	
+	MOV	#LFD00, R2	; 9678	LD DE,$FD00	
+	MOV	#12., R1	; 967B	LD C,$0C	
+L967D:	MOVB	(R3), R0	; 967D	LD A,(HL)	
+	BIC	#177400, R0
+	MOV	R3, L9659	; 967E	LD ($9659),HL	
+	PUSH	R4		; 9681	PUSH IX	
+	PUSH	R2		; 9683	PUSH DE	
+	PUSH	R2		; 9684	PUSH DE	
+	MOV	R0, R3		; 9685	LD L,A	
+				; 9686	LD H,$00	
+	ASL	R3		; 9688	ADD HL,HL	
+	ASL	R3		; 9689	ADD HL,HL	
+	MOV	R3, R2		; 968A	LD D,H	
+				; 968B	LD E,L	
+	ASL	R3		; 968C	ADD HL,HL	
+	ADD	R2, R3		; 968D	ADD HL,DE	A * 12. -> HL
+				; 968E	LD DE,$650C	
+	ADD	#L650C, R3	; 9691	ADD HL,DE	
+	MOV	L9658, R0	; 9692	LD A,($9658)	
+	MOV	R0, R5		; 9695	LD B,A		height count
+	MOV	R0, R2		; 9696	LD E,A	
+				; 9697	LD D,$00	
+				; 9699	AND A	
+	SUB	R2, R3		; 969A	SBC HL,DE	
+L969C:	MOVB	(R3), R2	; 969C	LD E,(HL)	
+	BIC	#177400, R2
+	ADD	#L7900, R2	; 969D	LD D,$79	
+	MOV	R3, L965B	; 969F	LD ($965B),HL	
+	MOVB	(R2), R0	; 96A2	LD A,(DE)	
+	POP	R3		; 96A3	POP HL	
+	MOVB	R0, (R3)	; 96A4	LD (HL),A	
+				; 96A5	LD DE,$0020	
+	ADD	#32., R3	; 96A8	ADD HL,DE	
+	PUSH	R3		; 96A9	PUSH HL	
+	MOV	L965B, R3	; 96AA	LD HL,($965B)	
+	MOVB	(R3), R0	; 96AD	LD A,(HL)	
+	BIC	#177400, R0
+	MOV	R0, R3		; 96AE	LD L,A	
+				; 96AF	LD H,$00	
+	ASL	R3		; 96B1	ADD HL,HL	
+	ASL	R3		; 96B2	ADD HL,HL	
+	ASL	R3		; 96B3	ADD HL,HL	
+	ADD	#L7100, R3	; 96B4	LD DE,$7100	
+				; 96B7	ADD HL,DE	
+	MOV	#8., R0		; 96B8	LD A,$08	
+	MOV	#32., R2	; 96BA	LD DE,$0020	line length
+L96BD:				; 96BD	EX AF,AF'	
+	MOVB	(R3)+, (R4)	; 96BE	LD A,(HL)	
+				; 96BF	LD (IX+$00),A	
+				; 96C2	INC HL	
+	ADD	R2, R4		; 96C3	ADD IX,DE	next line
+				; 96C5	EX AF,AF'	
+	SOB	R0, L96BD	; 96C6	DEC A	
+				; 96C7	JR NZ,$96BD	
+	MOV	L965B, R3	; 96C9	LD HL,($965B)	
+	INC	R3		; 96CC	INC HL	
+	SOB	R5, L969C	; 96CD	DJNZ $969C	
+	POP	R2		; 96CF	POP DE	
+	POP	R2		; 96D0	POP DE	
+	POP	R4		; 96D1	POP IX	
+	INC	R2		; 96D3	INC DE	
+	INC	R4		; 96D4	INC IX	
+	MOV	L9659, R3	; 96D6	LD HL,($9659)	
+	INC	R3		; 96D9	INC HL	
+				; 96DA	LD A,IXl	
+	BITB	#1, R4		; 96DC	BIT 0,A	
+	BEQ	L967D		; 96DE	JR Z,$967D	
+	DECB	L9658		; 96E0	LD A,($9658)	
+				; 96E3	DEC A	
+				; 96E4	LD ($9658),A	
+	DEC	R1		; 96E7	DEC C	
+	BNE	L967D		; 96E8	JR NZ,$967D	
+		; 96EA	LD A,$01	
+		; 96EC	LD ($9658),A	
+		; 96EF	LD IX,$EA0D	
+		; 96F3	LD DE,$FF28	
+		; 96F6	LD C,$0C	
+		; 96F8	LD A,(HL)
+
+	;TODO
+
+	MOV	#<LD900+5>, R3	; 976D	LD HL,$D905	
+	MOV	#<LE900+745.>, R2
+	MOV	#377, R0	; 9770	LD DE,$D906	
+	MOV	#32., R1	; 9773	LD (HL),$FF	
+1$:	MOVB	R0, (R3)+	; 9775	LD BC,$001F	
+	MOVB	R0, (R2)+
+				; 9778	LDIR		Make top line
+				; 977A	LD HL,$D905	
+		 		; 977D	LD DE,$EAE5	
+				; 9780	LD BC,$0020	
+	SOB	R1, 1$		; 9783	LDIR		Make top line
+; Линейки слева и справа
+	MOV	#<LD900+37.>, R3	; 9785	LD HL,$D925	
+	MOV	#31., R2	; 9788	LD DE,$001F	
+	MOV	#142., R1	; 978B	LD B,$8E	lines	
+L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)	
+				; 978E	OR $80	        Left border
+				; 9790	LD (HL),A	
+	ADD	R2, R3		; 9791	ADD HL,DE	
+	BISB	#200, (R3)+	; 9792	LD A,(HL)	
+				; 9793	OR $01		Right border
+				; 9795	LD (HL),A	
+				; 9796	INC HL	
+	SOB	R1, L978D	; 9797	DJNZ $978D	
+; NOTE: 9799..97A4 code fills attributes, removed
+; Вывод экрана D905 на реальный экран
+	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905	
+	MOV	#105504, R2	; 97A9	LD DE,$4000	Screen address
+	MOV	#144., R0		; Количество копируемых строк
+10$:	PUSH	R0
+	MOV	#32., R1		; Байт в строке
+20$:	MOVB	(R3)+, R0
+	BIC    	#177400, R0
+	MOV	R2, (R4)		; Устанавливаем адрес
+	MOV	R0, (R5)		; Пишем в экран	
+	INC	R2
+	SOB	R1, 20$
+	ADD	#<80.-32.>, R2		; Следующая строка
+	POP	R0
+	SOB	R0, 10$
+;
+; NOTE: 9812..981D code fills attributes, removed
+;
+	JMP	LA546 		; 981F	JP $A546
 
 ; Draw sprite with shift by -2px
 L9933:	MOV	R1, R3		; 9933	LD L,C	
@@ -363,10 +690,10 @@ LA291:	MOV	#L8F25, R3		; A291	LD HL,$8F25	Copy const block
 	MOV	#<L8F25-L8F00>, R1	; A297	LD BC,$0025	
 1$:	MOVB	(R3)+, (R2)+		; A29A	LDIR		copy
 	SOB	R1, 1$
-	CALL	LA3D3			; A29C	CALL $A3D3	
+	CALL	LA3D3			; A29C	CALL $A3D3	Prepare screen and indicators
 	CALL	L9423			; A29F	CALL $9423	
 	CALL	L92CE			; A2A2	CALL $92CE	
-	CALL	L95EF			; A2A5	CALL $95EF	
+	CALL	L95EF			; A2A5	CALL $95EF	Show the screen
 	MOV	#377, L8A90		; A2A8	LD A,$FF	
 					; A2AA	LD ($8A90),A	
 	MOV	#1, L8A08		; A2AD	LD A,$01	
@@ -381,7 +708,7 @@ LA367:
 	CALL	LA291		; A367	CALL $A291	
 	BR	LA372		; A36A	JR $A372	
 LA36C:	L92CE			; A36C	CALL $92CE	
-	CALL	L95EF		; A36F	CALL $95EF
+	CALL	L95EF		; A36F	CALL $95EF	Show the screen
 LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 	CALL	LB890		; A375	CALL $B890	Print Text
 
@@ -395,6 +722,7 @@ LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 	CALL WTKEY ;STUB
 	RETURN ;STUB
 
+; Prepare screen and indicators
 LA3D3:
 	MOV	#GAMESC, R1		; Строка для подготовки игрового экрана
 	CALL	PRINT
@@ -402,7 +730,7 @@ LA3D3:
 
 	RETURN ;STUB
 
-LA4C7:	.WORD	112505
+LA4C7:	.WORD	106705
 	.BYTE	130,312,124,125,135,137,115,135,137,124,125,312,376	; DEMO MODE
 	.EVEN
 LA4D6:	.WORD	116304
@@ -418,6 +746,9 @@ LA4D6:	.WORD	116304
 	.WORD	124504
 	.BYTE	131,312,143,137,115,127,125,144,115,137,136,115,147,131,144,130,115,131,144,120,312,376
 	.EVEN
+
+LA546:
+	RETURN ;STUB
 
 ; Start point
 LB0DE:
@@ -455,7 +786,10 @@ LB13C:
 	BNE	3$
 	CALL	LA367		; B17C	CALL $8F79	JP A367
 	BR	LB0E7		; B17F	JP $B0E7
-3$:	
+3$:	CMP	R0, #060		; '0' ?
+	BNE	4$
+	JMP	FINISH			; Завершение работы
+4$:
 	BR	LB13C		; B200	JP $B13C
 	RETURN ;STUB
 
@@ -479,8 +813,8 @@ PORTBY:
 LB21E:	.WORD	106716
 	.BYTE	130,212,121,145,144,130,137,142,115,123,137,143,144,121,115,140	; AUTHOR
 	.BYTE	121,136,121,151,131,212,377,000
-;	.WORD	124533
-;	.BYTE	131,312,137,140,144,131,137,136,143,377				; OPTIONS
+	.WORD	124533
+	.BYTE	131,300,212,025,050,031,044,377					; 0 EXIT
 ;	.WORD	127127
 ;	.BYTE	131,301,212,033,025,051,022,037,021,042,024,377			; 1 KEYBOARD
 ;	.WORD	130325
@@ -1070,11 +1404,11 @@ LB8E2:	MOVB	(R3), R0	; B8E2	LD A,(HL)
 .INCLUDE /SPRITE.MAC/
 
 LD900:	.BLKB	704.
-
 ; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
 LDBC0:	.BLKB	832.
-LDF00:	.BLKB	<6144.-832.>
-	.BLKB	152.
+LDF00:	.BLKB	2560.
+LE900:	.BLKB	5120.
+LFD00:
 
 	.EVEN
 STACK::	.BLKW	100			; For stack

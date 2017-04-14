@@ -27,7 +27,19 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessData6500(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
+            ProcessSprites6AD0(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             ProcessSprites7100(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
+            ProcessData7900(writer);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
@@ -91,6 +103,47 @@ namespace SpriteRotate
             }
         }
 
+        static void ProcessData6500(StreamWriter writer)
+        {
+            writer.WriteLine("; Data");
+            writer.Write("L6500:");
+            int addr = 0x6500;
+            for (int i = 0; i < 1488; i++)
+            {
+                if (i == 12) writer.Write("L650C:");
+                if ((i % 12) == 0) writer.Write("\t.BYTE\t");
+
+                byte b = memdmp[addr + i];
+                writer.Write(EncodeOctalString(b));
+
+                if ((i % 12) < 11 && i < 1488 - 1)
+                    writer.Write(",");
+                else
+                    writer.WriteLine();
+            }
+        }
+
+        static void ProcessSprites6AD0(StreamWriter writer)
+        {
+            writer.WriteLine("L6AD0::\t; Data");
+            int addr = 0x6AD0;
+            for (int sprite = 0; sprite < 99; sprite++)
+            {
+                writer.Write("\t.BYTE\t");
+                for (int i = 0; i < 16; i++) // bytes
+                {
+                    byte b = memdmp[addr];
+                    writer.Write(EncodeOctalString(b));
+
+                    if (i < 15)
+                        writer.Write(",");
+
+                    addr++;
+                }
+                writer.WriteLine();
+            }
+        }
+
         static void ProcessSprites7100(StreamWriter writer)
         {
             writer.WriteLine("L7100::\t; Sprites");
@@ -113,6 +166,29 @@ namespace SpriteRotate
                     addr++;
                 }
                 writer.WriteLine();
+            }
+        }
+
+        static void ProcessData7900(StreamWriter writer)
+        {
+            writer.WriteLine("; Data");
+            writer.Write("L7900:");
+            int addr = 0x7900;
+            for (int i = 0; i < 5632; i++)
+            {
+                if ((i % 16) == 0)
+                    writer.Write("\t.BYTE\t");
+
+                byte b = memdmp[addr + i];
+                //int bb = 0;
+                //for (int j = 0; j < 8; j++)
+                //    bb |= ((b >> (7 - j)) & 1) << j;
+
+                writer.Write(EncodeOctalString((byte)b));
+                if ((i % 16) < 15 && i < 5632 - 1)
+                    writer.Write(",");
+                else
+                    writer.WriteLine();
             }
         }
 
