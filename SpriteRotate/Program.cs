@@ -47,6 +47,10 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessFontA490(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             ProcessMasksAndSprites(writer, bmpTiles);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
@@ -79,6 +83,31 @@ namespace SpriteRotate
                     if (i < 4)
                         writer.Write(",");
                     //
+                }
+                writer.WriteLine("\t; {0} {1}", EncodeOctalString((byte)tile), TileChars[tile]);
+            }
+        }
+
+        static void ProcessFontA490(StreamWriter writer)
+        {
+            const string TileChars = " 0123456789";
+
+            writer.Write("LA490:");
+            for (int tile = 0; tile < 11; tile++)
+            {
+                int addr = 0xA490 + tile * 5;
+                writer.Write("\t.BYTE\t");
+                for (int i = 0; i < 5; i++)
+                {
+                    byte b = memdmp[addr + i];
+                    int bb = 0;
+                    for (int j = 0; j < 8; j++)
+                        bb |= ((b >> (7 - j)) & 1) << j;
+
+                    //bb = bb >> 1;
+                    writer.Write(EncodeOctalString((byte)bb));
+                    if (i < 4)
+                        writer.Write(",");
                 }
                 writer.WriteLine("\t; {0} {1}", EncodeOctalString((byte)tile), TileChars[tile]);
             }
