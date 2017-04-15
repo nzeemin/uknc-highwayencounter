@@ -27,6 +27,10 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessSprite6020(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             ProcessData6500(writer);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
@@ -96,6 +100,28 @@ namespace SpriteRotate
                     bb |= ((b >> (7 - j)) & 1) << j;
 
                 writer.Write(EncodeOctalString((byte)bb));
+                if ((i % 16) < 15)
+                    writer.Write(",");
+                else
+                    writer.WriteLine();
+            }
+        }
+
+        static void ProcessSprite6020(StreamWriter writer)
+        {
+            writer.WriteLine("; Indicators panel sprite");
+            writer.Write("L6020:");
+            int addr = 0x6020;
+            for (int i = 0; i < 1088; i++)
+            {
+                if ((i % 16) == 0) writer.Write("\t.BYTE\t");
+
+                byte b = memdmp[addr + i];
+                int bb = 0;
+                for (int j = 0; j < 8; j++)
+                    bb |= ((b >> (7 - j)) & 1) << j;
+                writer.Write(EncodeOctalString((byte)bb));
+
                 if ((i % 16) < 15)
                     writer.Write(",");
                 else
