@@ -47,6 +47,10 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessSprites953B(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             ProcessFontA490(writer);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
@@ -244,6 +248,31 @@ namespace SpriteRotate
                     writer.Write(",");
                 else
                     writer.WriteLine();
+            }
+        }
+
+        static void ProcessSprites953B(StreamWriter writer)
+        {
+            writer.WriteLine("L953B::\t; Sprites");
+            int addr = 0x953B;
+            for (int sprite = 0; sprite < 21; sprite++) // sprites
+            {
+                writer.Write("\t.BYTE\t");
+                for (int i = 0; i < 8; i++) // bytes
+                {
+                    byte b = memdmp[addr];
+                    int bb = 0;
+                    for (int j = 0; j < 8; j++)
+                        bb |= ((b >> (7 - j)) & 1) << j;
+
+                    writer.Write(EncodeOctalString((byte)bb));
+
+                    if (i < 7)
+                        writer.Write(",");
+
+                    addr++;
+                }
+                writer.WriteLine();
             }
         }
 

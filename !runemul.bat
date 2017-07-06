@@ -1,8 +1,8 @@
 @echo off
 
 if exist x-ukncbtl\HWYENC.BIN del x-ukncbtl\HWYENC.BIN
-D:\Work\MyProjects\ukncbtl-utils\Sav2Cartridge\Release\Sav2Cart.exe HWYENC.SAV HWYENC.BIN
-move HWYENC.BIN x-ukncbtl\HWYENC.BIN
+rem E:\Work\MyProjects\ukncbtl-utils\Sav2Cartridge\Release\Sav2Cart.exe HWYENC.SAV HWYENC.BIN
+rem move HWYENC.BIN x-ukncbtl\HWYENC.BIN
 
 del x-ukncbtl\sys1002.dsk
 @if exist "x-ukncbtl\sys1002.dsk" (
@@ -10,7 +10,7 @@ del x-ukncbtl\sys1002.dsk
   echo ####### FAILED to delete old disk image file #######
   exit /b
 )
-copy D:\Work\MyProjects-old\svn-ukncbtl\lib\disks\sys1002.dsk .
+copy E:\Work\MyProjects-old\svn-ukncbtl\lib\disks\sys1002.dsk .
 C:\bin\rt11dsk a sys1002.dsk HWYENC.SAV
 move sys1002.dsk x-ukncbtl\sys1002.dsk
 
@@ -19,4 +19,4 @@ move sys1002.dsk x-ukncbtl\sys1002.dsk
   exit /b
 )
 
-start x-ukncbtl\UKNCBTL.exe
+start x-ukncbtl\UKNCBTL.exe /boot
