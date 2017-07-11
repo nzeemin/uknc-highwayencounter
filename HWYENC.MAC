@@ -21,6 +21,8 @@ START::
 	CALL	LB0DE	; Start point
 	CALL	PAUSE
 
+; Game screen start address: #105504
+
 FINISH:
 	MOV	OSTACK, SP	; Восстанавливаем стек
 	MOV	#EXITSC, R1	; Строка очистки экрана перед выходом
@@ -77,6 +79,22 @@ WTKEY:	TSTB	@#177560
 
 ;------------------------------------------------------------------------------
 
+L7A00:	.BYTE	200,324,020,325,240,325,060,326,300,326,120,327,340,327,160,330
+	.BYTE	100,322,320,322,140,323,360,323,040,321,260,321,040,321,260,321
+	.BYTE	000,320,220,320,000,320,220,320,000,307,220,307,040,310,260,310
+	.BYTE	100,311,320,311,140,312,360,312,200,313,020,314,240,314,060,315
+	.BYTE	300,315,120,316,340,316,160,317,200,302,020,303,240,303,060,304
+	.BYTE	320,300,320,300,320,300,320,300,300,304,120,305,340,305,160,306
+	.BYTE	360,301,360,301,360,301,360,301,140,301,140,301,140,301,140,301
+	.BYTE	100,300,100,300,100,300,100,300,240,272,060,273,240,272,060,273
+	.BYTE	340,274,340,274,340,274,340,274,340,274,340,274,340,274,340,274
+	.BYTE	160,275,160,275,160,275,160,275,160,275,160,275,160,275,160,275
+	.BYTE	000,276,000,276,000,276,000,276,000,276,000,276,000,276,000,276
+	.BYTE	220,276,220,276,220,276,220,276,220,276,220,276,220,276,220,276
+	.BYTE	040,277,040,277,040,277,040,277,040,277,040,277,040,277,040,277
+	.BYTE	260,277,260,277,260,277,260,277,260,277,260,277,260,277,260,277
+	.BYTE	300,273,300,273,300,273,300,273,120,274,020,272,200,271,120,274
+	.BYTE	020,272,020,272,020,272,020,272,320,300,320,300,320,300,320,300
 L7B00:	.BYTE	376,336,001,231,334,330,002,002,001,014,021,054,004,044,164,002
 	.BYTE	066,120,002,246,324,140,006,000,000,004,022,334,000,070,120,002
 	.BYTE	076,120,002,045,324,140,012,000,000,004,015,334,000,100,120,002
@@ -387,7 +405,8 @@ L8F05:	.WORD	0
 L8F07:	.WORD	260
 L8F09:	.WORD	200
 L8F0B:	.BLKB	3.
-L8F0E:	.BLKB	6.
+L8F0E:	.BYTE	0
+L8F0F:	.BLKB	5.
 L8F14:	.BYTE	0
 L8F15:	.BYTE	0
 L8F16:	.BYTE	0
@@ -1012,21 +1031,21 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	MOV	#<LD900+1005>, R3	; 97DF	LD HL,$DB05	
 	MOV	#LEB00, R2		; 97E2	LD DE,$EB00	
 	MOV	#4096., R1		; 97E5	LD BC,$1000	
-1$:	MOVB	(R3)+, (R2)+	; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
+1$:	MOVB	(R3)+, (R2)+		; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
 	SOB	R1, 1$
-	MOV	#15., R5	; 97EA	LD C,$0F	
-	MOV	#2., R4		; 97EC	LD B,$02	Осталось скопировать 2x8 строк
+	MOV	#15., R5		; 97EA	LD C,$0F	
+	MOV	#2., R4			; 97EC	LD B,$02	Осталось скопировать 2x8 строк
 	MOV	#<LD900+22.>, R3	; 97EE	LD HL,$D916	
 	MOV	#<LE900+17.>, R2	; 97F1	LD DE,$E911	
-L97F4:	MOV	#8., R0		; 97F4	LD A,$08	
-L97F6:	PUSH	R1		; 97F6	PUSH BC	
-	MOV	R5, R1		; 97F7	LD B,$00	
-	PUSH	R3		; 97F9	PUSH HL	
-	PUSH	R2		; 97FA	PUSH DE	
-1$:	MOVB	(R3)+, (R2)+	; 97FB	LDIR	
+L97F4:	MOV	#8., R0			; 97F4	LD A,$08	
+L97F6:	PUSH	R1			; 97F6	PUSH BC	
+	MOV	R5, R1			; 97F7	LD B,$00	
+	PUSH	R3			; 97F9	PUSH HL	
+	PUSH	R2			; 97FA	PUSH DE	
+1$:	MOVB	(R3)+, (R2)+		; 97FB	LDIR	
 	SOB	R1, 1$
-	POP	R2		; 97FD	POP DE	
-	POP	R3		; 97FE	POP HL	
+	POP	R2			; 97FD	POP DE	
+	POP	R3			; 97FE	POP HL	
 				; 97FF	LD BC,$0020	
 	ADD	#40, R3		; 9802	ADD HL,BC	
 				; 9803	EX DE,HL	
@@ -1094,6 +1113,7 @@ L9859:	RETURN			; 9859	RET
 ; Routine
 ; Used by the routines at 90F2, A34D, A8C5.
 L985A:	
+    RETURN ;STUB
 	MOV	L8F01, R4	; 985A	LD IX,($8F01)	
 	MOV	#L8D52, R3	; 985E	LD HL,$8D52	
 	MOV	R3, L8F0B	; 9861	LD ($8F0B),HL	
@@ -1145,35 +1165,35 @@ L98A4:		; 98A4	EX AF,AF'
 	MOVB	R0, (R2)	; 98B4	LD (DE),A	
 	BR	L98CA		; 98B5	JP $98CA	
 L98B8:	PUSH	R3		; 98B8	PUSH HL	
-		; 98B9	LD A,E	
-		; 98BA	SUB L	
-		; 98BB	LD C,A	
-		; 98BC	LD B,$00	
-		; 98BE	INC C	
-		; 98BF	LD L,E	
-		; 98C0	INC E	
-		; 98C1	INC E	
-		; 98C2	INC E	
-		; 98C3	LD ($8F0B),DE	
-1$:		; 98C7	LDDR	
+	MOV	R2, R0		; 98B9	LD A,E	
+	SUB	R3, R0		; 98BA	SUB L	
+	MOV	R0, R1		; 98BB	LD C,A	
+				; 98BC	LD B,$00	
+	INC	R1		; 98BE	INC C	
+	MOV	R2, R3		; 98BF	LD L,E	
+	INC	R2		; 98C0	INC E	
+	INC	R2		; 98C1	INC E	
+	INC	R2		; 98C2	INC E	
+	MOV	R2, L8F0B	; 98C3	LD ($8F0B),DE	
+1$:	MOVB	-(R3), -(R2)	; 98C7	LDDR	
+	SOB	R1, 1$
 	POP	R3		; 98C9	POP HL	
 L98CA:		; 98CA	EX AF,AF'	
-		; 98CB	LD (HL),A	
-		; 98CC	INC L	
-		; 98CD	LD E,IXl	
-		; 98CF	LD D,IXh	
-		; 98D1	LD (HL),E	
-		; 98D2	INC L	
-		; 98D3	LD (HL),D	
-L98D4:		; 98D4	LD DE,$0010	
-		; 98D7	ADD IX,DE	
-		; 98D9	JP $9866	
-L98DC:		; 98DC	LD HL,$8D52	
-		; 98DF	LD A,(HL)	
-		; 98E0	AND A	
-		; 98E1	RET Z	
+	MOVB	R0, (R3)	; 98CB	LD (HL),A	
+	INC	R3		; 98CC	INC L	
+	MOV	R4, R2		; 98CD	LD E,IXl	
+				; 98CF	LD D,IXh	
+	MOV	R2, (R3)+	; 98D1	LD (HL),E	
+				; 98D2	INC L	
+				; 98D3	LD (HL),D	
+L98D4:				; 98D4	LD DE,$0010	
+	ADD	#16., R4	; 98D7	ADD IX,DE	
+	BR	L9866		; 98D9	JP $9866	
+L98DC:	MOV	#L8D52, R3	; 98DC	LD HL,$8D52	
+	MOVB	(R3), R0	; 98DF	LD A,(HL)	
+	BNE	L98E2		; 98E0	AND A	
+	RETURN			; 98E1	RET Z	
 L98E2:
-	RETURN ;STUB
 	INC	R3		; 98E2	INC L	
 	MOVB	(R3)+, R4	; 98E3	LD A,(HL)	
 	BIC	#177400, R4	; 98E4	LD IXl,A	
@@ -1182,16 +1202,17 @@ L98E2:
 	BIC	#177400, R5	; 98E8	LD IXh,A	
 				; 98EA	INC L	
 	PUSH	R3		; 98EB	PUSH HL	
-		; 98EC	LD H,$8F	
-		; 98EE	LD L,(IX+$0A)	
-		; 98F1	LD A,(HL)	
-		; 98F2	ADD A,(IX+$05)	
-		; 98F5	LD L,A	
-		; 98F6	LD H,$7A	
-		; 98F8	LD E,(HL)	
-		; 98F9	INC HL	
-		; 98FA	LD D,(HL)	
-		; 98FB	LD A,(IX+$09)	
+	MOV	#L8F00, R3	; 98EC	LD H,$8F	
+	ADD	R0, R3		; 98EE	LD L,(IX+$0A)	
+	MOVB	(R3), R0	; 98F1	LD A,(HL)	
+	MOVB	5(R4), R5	; 98F2	ADD A,(IX+$05)	
+	ADD	R5, R0
+	MOVB	#L7A00, R3	; 98F5	LD L,A	
+	ADD	R0, R3		; 98F6	LD H,$7A	
+	MOV	(R3)+, R2	; 98F8	LD E,(HL)	
+				; 98F9	INC HL	
+				; 98FA	LD D,(HL)	
+	MOVB	11(R4), R0	; 98FB	LD A,(IX+$09)	
 	ADD	R0, R0		; 98FE	ADD A,A	
 	MOV	R0, R1		; 98FF	LD C,A	
 				; 9900	LD B,$00	
@@ -1362,7 +1383,7 @@ L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
 L9A26:
 	MOV	R1, R3		; 9A26	LD H,B	
 				; 9A27	LD L,C	
-	MOV	#24., R0	; 9A28	LD A,$18	
+	MOV	#24., R0	; 9A28	LD A,$18	счётчик цикла = 24.
 L9A2A:	PUSH	R0		; 9A2A	EX AF,AF'	
 				; 9A2B	EX DE,HL	
 	MOV	(R2)+, R0	; 9A2C	LD A,(HL)	
@@ -1418,14 +1439,14 @@ L9A2A:	PUSH	R0		; 9A2A	EX AF,AF'
 	SUB	#34., R3	; 9A66	LD BC,$FFDE	
 				; 9A69	ADD HL,BC	
 	POP	R0		; 9A6A	EX AF,AF'	
-	SOB	R0, L9A2A	; 9A6B	DEC A	
+	SOB	R0, L9A2A	; 9A6B	DEC A		повтор цикла
 				; 9A6C	JP NZ,$9A2A	
 	RETURN			; 9A6F	RET	
 
 ; Draw sprite with no shift
 L9A70:	MOV	R1, R3		; 9A70	LD H,B	
 				; 9A71	LD L,C	
-	MOV	#24., R1	; 9A72	LD B,$18	
+	MOV	#24., R1	; 9A72	LD B,$18	счётчик цикла = 24.
 L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)	
 	BICB	R0, (R3)+	; 9A75	AND (HL)	
 				; 9A76	LD (HL),A	
@@ -1460,96 +1481,119 @@ L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)
 				; 9A93	LD BC,$FFDE	
 	SUB	#34., R3	; 9A96	ADD HL,BC	
 				; 9A97	LD B,A	
-	SOB	R1, L9A74	; 9A98	DJNZ $9A74	
+	SOB	R1, L9A74	; 9A98	DJNZ $9A74	повтор цикла
 	RETURN			; 9A9A	RET
 
-; Routine -- Вывод объектов на экран?
-L9A9B:  RETURN ;STUB TODO
-	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	
-	MOV	(R3), R0	; 9A9E	LD A,(HL)	
+; Routine -- Отрисовка теневого экрана
+L9A9B:
+	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	Адрес массива записей о строках теневого экрана
+	MOV	(R3), R0	; 9A9E	LD A,(HL)	NOTE: Здесь byte заменён на word
 L9A9F:	INC	R3		; 9A9F	INC HL	
 	INC	R3
-	MOVB	(R3)+, R2	; 9AA0	LD E,(HL)	
-	BIC	#177400, R2
-	SWAB	R2		; 9AA1	INC HL	
-	BISB	(R3)+, R2	; 9AA2	LD D,(HL)	
-	SWAB	R2		; 9AA3	INC HL	
+	MOV	(R3)+, R2	; 9AA0	LD E,(HL)	
+				; 9AA1	INC HL	
+				; 9AA2	LD D,(HL)	DE = адрес в теневом экране
+				; 9AA3	INC HL	
 	PUSH	R2		; 9AA4	PUSH DE	
-	MOVB	(R3)+, R2	; 9AA5	LD E,(HL)
-	BIC	#177400, R2
-	SWAB	R2		; 9AA6	INC HL	
-	BISB	(R3)+, R2	; 9AA7	LD D,(HL)	DE = address on the screen	
-	SWAB	R2		; 9AA8	INC HL	
-	MOVB	(R3)+, R1	; 9AA9	LD C,(HL)	
-	BIC	#177400, R1
-	SWAB	R1		; 9AAA	INC HL	
-	BISB	(R3)+, R1	; 9AAB	LD B,(HL)	
-	SWAB	R1		; 9AAC	INC HL	
-	MOV	(SP), R5	; 9AAD	EX (SP),HL	
+	MOV	(R3)+, R2	; 9AA5	LD E,(HL)
+				; 9AA6	INC HL	
+				; 9AA7	LD D,(HL)	DE = адрес на экране -- конец выводимой строки
+				; 9AA8	INC HL	
+	MOV	(R3)+, R1	; 9AA9	LD C,(HL)	
+				; 9AAA	INC HL	
+				; 9AAB	LD B,(HL)	BC = адрес конца массива
+				; 9AAC	INC HL	
+	MOV	(SP), R5	; 9AAD	EX (SP),HL	теперь HL = адрес в теневом экране
 	MOV	R3, (SP)
 	MOV	R5, R3
-	MOV	R0, R4		; 9AAE	LD IXh,A	
-L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	
-				; 9AB1	AND A	
-	BEQ	L9ACA		; 9AB2	JP Z,$9ACA
-	DECB	R0		; 9AB5	DEC A	
-	MOVB	R0, (R1)	; 9AB6	LD (BC),A	
-	MOV	R1, R5		; 9AB7	LD IXl,B	
-	MOV	#8., R1		; 9AB9	LD B,$08	
-L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	
-	BIS	#177400, R0
-	MOV	R2, @#176640	; 9ABC	LD (DE),A	
-	MOV	R0, @#176642
-	SUB	#80., R2	; 9ABD	DEC D	
-				; 9ABE	LD A,$E0	
-	ADD	#224., R3	; 9AC0	ADD A,L	
-				; 9AC1	LD L,A	
-	SOB	R1, L9ABB	; 9AC2	DJNZ $9ABB	
-				; 9AC4	LD A,D	
-	ADD	#8., R2		; 9AC5	ADD A,$08	
-				; 9AC7	LD D,A	
-	MOV	R5, R1		; 9AC8	LD B,IXl
-L9ACA:
-	DEC	R3		; 9ACA	DEC L	
-	DEC	R2		; 9ACB	DEC E	
-	DEC	R1		; 9ACC	DEC C	
-	DEC	R4		; 9ACD	DEC IXh	
-	BNE	L9AB0		; 9ACF	JP NZ,$9AB0	
+	MOV	R0, R4		; 9AAE	LD IXh,A	счётчик цикла по строке
+L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
+				; 9AB1	AND A		|  пусто?
+	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  да => переходим
+	DEC	R0		; 9AB5	DEC A		|
+	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|
+	MOV	R1, R5		; 9AB7	LD IXl,B	|  сохраняем B
+	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
+L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
+	BIS	#177400, R0			;	|  |
+	MOV	R2, @#176640	; 9ABC	LD (DE),A	|  |  косвенный адрес
+	MOV	R0, @#176642			;	|  |  выводим на экран
+	SUB	#80., R2	; 9ABD	DEC D		|  |  к предыдущей строке экрана
+				; 9ABE	LD A,$E0	|  |
+	SUB	#32., R3	; 9AC0	ADD A,L		|  |  к предыдущей строке теневого экрана
+				; 9AC1	LD L,A		|  |
+	SOB	R1, L9ABB	; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
+				; 9AC4	LD A,D	        |
+	ADD	#640., R2	; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
+	ADD	#256., R3	; 9AC7	LD D,A	        |  
+	MOV	R5, R1		; 9AC8	LD B,IXl	|  восстанавливаем B
+L9ACA:						;	|
+	DEC	R3		; 9ACA	DEC L		|
+	DEC	R2		; 9ACB	DEC E		|  к предыдущей позиции в строке
+	DEC	R1		; 9ACC	DEC C		|  к предыдущему элементу массива
+	SOB	R4, L9AB0	; 9ACD	DEC IXh		|
+				; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
 	POP	R3		; 9AD2	POP HL	
 	MOVB	(R3), R0	; 9AD3	LD A,(HL)	
 				; 9AD4	AND A	
-	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	
-
+	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	продолжение цикла по строкам
+;
+	MOVB	L8F0B, R0	; 9AD8	LD A,($8F0B)	
+	CMPB	R0, #106.	; 9ADB	CP $6A	
+	BHIS	L9B72		; 9ADD	JP NC,$9B72	
+		; 9AE0	LD B,A	
+		; 9AE1	LD A,$6A	
+		; 9AE3	SUB B	
+		; 9AE4	ADD A,A	
+L9AE5:		; 9AE5	LD B,$C8	
+L9AE7:		; 9AE7	DJNZ $9AE7	
+		; 9AE9	DEC A	
+		; 9AEA	JR NZ,$9AE5	
+		; 9AEC	JP $9B72	
+L9AEF:		; 9AEF	LD A,($8F15)	
+		; 9AF2	BIT 1,A	
+		; 9AF4	JR Z,$9B01	
+		; 9AF6	LD L,$04	
+		; 9AF8	LD D,$46	
+		; 9AFA	LD E,$08	
+		; 9AFC	LD H,$FA	
+		; 9AFE	JP $9B5B	
+L9B01:		; 9B01	LD HL,$9B46
 	;TODO
 	RETURN ;STUB
+
+; Sound. This entry point is used by the routine at A694.
+L9B2C:
+
+; Sound. This entry point is used by the routine at A694.
+L9B5B:
+
+L9B72:
 
 L9C7B:
 	;TODO
 	RETURN ;STUB
 
-L9BFC:
-	.WORD	012, <LFD00-1027>, 136530, LFF29	; 0A FAE9 5729 FF29
-	.WORD	0, 0, 0, 0 ;STUB
-	.WORD	014, <LFD00-1027>, 136530, LFF29 	; 0C F9EB 570B FF0B
-	.WORD	016, <LFD00-1027>, 136530, LFF29 	; 0E F8ED 4FED FEED
-	.WORD	020, <LFD00-1027>, 136530, LFF29 	; 10 F7EF 4FCF FECF
-	.WORD	022, <LFD00-1027>, 136530, LFF29 	; 12 ...
-	.WORD	024, <LFD00-1027>, 136530, LFF29 	; 14 ...
-	.WORD	026, <LFD00-1027>, 136530, LFF29 	; 16 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 18 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 1A ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 1B ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 1B ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 1B ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 19 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 17 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 15 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 13 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 11 ...
-	.WORD	030, <LFD00-1027>, 136530, LFF29 	; 0F ...
-	.WORD	0, 0, 0, 0 ;STUB
-	.EVEN
-	;TODO
+; Data block: 18 записей для отрисовки теневого экрана
+L9BFC:	.WORD	012, <LFD00-1027>, 133775, <LFD00+553.>	; 0A FAE9 5729 FF29  строка 18
+	.WORD	014, <LFD00-1425>, 132577, <LFF29-36> 	; 0C F9EB 570B FF0B
+	.WORD	016, <LFD00-2023>, 131401, <LFF29-74> 	; 0E F8ED 4FED FEED
+	.WORD	020, <LFD00-2421>, 130203, <LFF29-132> 	; 10 F7EF 4FCF FECF
+	.WORD	022, <LFD00-3017>, 127005, <LFF29-170> 	; 12 F6F1 4FB1 FEB1
+	.WORD	024, <LFD00-3415>, 125607, <LFF29-226> 	; 14 F5F3 4F93 FE93
+	.WORD	026, <LFD00-4013>, 124411, <LFF29-264> 	; 16 F4F5 4F75 FE75
+	.WORD	030, <LFD00-4411>, 123213, <LFF29-322> 	; 18 F3F7 4F57 FE57
+	.WORD	032, <LFD00-5007>, 122015, <LFF29-360> 	; 1A F2F9 4F39 FE39
+	.WORD	033, <LFD00-5405>, 120617, <LFF29-416> 	; 1B F1FB 4F1B FE1B
+	.WORD	033, <LFD00-6003>, 117421, <LFF29-454> 	; 1B F0FD 47FD FDFD
+	.WORD	033, <LFD00-6401>, 116223, <LFF29-512> 	; 1B EFFF 47DF FDDF
+	.WORD	031, <LFD00-7001>, 115023, <LFF29-552> 	; 19 EEFF 47BF FDBF
+	.WORD	027, <LFD00-7401>, 113623, <LFF29-612> 	; 17 EDFF 479F FD9F
+	.WORD	025, <LE900+1777>, 112423, <LFF29-652> 	; 15 ECFF 477F FD7F
+	.WORD	023, <LE900+1377>, 111223, <LFF29-712> 	; 13 EBFF 475F FD5F  строка 3
+	.WORD	021, <LE900+777>,  110023, <LFF29-752> 	; 11 EAFF 473F FD3F  строка 2
+	.WORD	017, <LE900+377>,  106623, <LFF29-1012>	; 0F E9FF 471F FD1F  строка 1
+	.WORD	000
 
 ; Routine
 ; Used by the routine at A11B.
@@ -1684,9 +1728,9 @@ LA1CD:		; A1CD	EX DE,HL
 	MOVB	#22., (R3)	; A1CE	LD (HL),$16	
 				; A1D0	LD HL,$8F22	
 	MOVB	#2, L8F22	; A1D3	LD (HL),$02	
-	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	
-	MOV	#5, R1		; A1D8	LD BC,$0005	
-1$:	MOVB	(R3)+, (R2)+	; A1DB	LDIR	
+	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	берём адрес откуда копировать
+	MOV	#5, R1		; A1D8	LD BC,$0005	5 байт
+1$:	MOVB	(R3)+, (R2)+	; A1DB	LDIR		копируем
 	SOB	R1, 1$
 	INC	R3		; A1DD	INC L	
 	INC	R3		; A1DE	INC L	
@@ -1709,31 +1753,31 @@ LA1CD:		; A1CD	EX DE,HL
 	BISB	#2, (R3)	; A1F6	SET 1,(HL)	
 LA1F8:
 	MOV	#L8F0E, R3	; A1F8	LD HL,$8F0E	
-		; A1FB	LD IX,($8F01)	
-		; A1FF	LD A,(IX+$07)	
-		; A202	ADD A,A	
-		; A203	LD (HL),A	
-		; A204	LD HL,$A28F	
-		; A207	XOR A	
-		; A208	CP (HL)	
-		; A209	JR Z,$A20F	
-		; A20B	DEC (HL)	
-		; A20C	JP $A233	
-		; A20F	LD (HL),$03	
-		; A211	LD HL,$8F0F	
-		; A214	LD A,($A28D)	
-		; A217	LD B,A	
-		; A218	LD A,(HL)	
-		; A219	ADD A,B	
-		; A21A	CP $07	
-		; A21C	JR C,$A227	
-		; A21E	LD A,B	
+	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	
+	MOVB	7(R4), R0	; A1FF	LD A,(IX+$07)	
+	ADD	R0, R0		; A202	ADD A,A	
+	MOVB	R0, (R3)	; A203	LD (HL),A	
+	MOV	#LA28F, R3	; A204	LD HL,$A28F	
+	CLR	R0		; A207	XOR A	
+	CMPB	(R3), R0	; A208	CP (HL)	
+	BEQ	LA20F		; A209	JR Z,$A20F	
+	DEC	(R3)		; A20B	DEC (HL)	
+	BR	LA233		; A20C	JP $A233	
+LA20F:	MOVB	#3, (R3)	; A20F	LD (HL),$03	
+	MOV	#L8F0F, R3	; A211	LD HL,$8F0F	
+	MOVB	LA28D, R1	; A214	LD A,($A28D)	
+				; A217	LD B,A	
+	MOVB	(R3), R0	; A218	LD A,(HL)	
+	ADD	R1, R0		; A219	ADD A,B	
+	CMP	R0, #7		; A21A	CP $07	
+	BLO	LA227		; A21C	JR C,$A227	
+	MOV	R1, R0		; A21E	LD A,B	
 		; A21F	NEG	
 		; A221	LD ($A28D),A	
 		; A224	LD B,A	
 		; A225	LD A,(HL)	
 		; A226	ADD A,B	
-		; A227	LD (HL),A	
+LA227:		; A227	LD (HL),A	
 		; A228	INC L	
 		; A229	INC L	
 		; A22A	LD A,(HL)	
@@ -1742,14 +1786,14 @@ LA1F8:
 		; A22D	CP $07	
 		; A22F	JR C,$A232	
 		; A231	XOR A	
-		; A232	LD (HL),A	
-		; A233	LD HL,$A290	
+LA232:		; A232	LD (HL),A	
+LA233:		; A233	LD HL,$A290	
 		; A236	XOR A	
 		; A237	CP (HL)	
 		; A238	JP Z,$A23F	
 		; A23B	DEC (HL)	
 		; A23C	JP $A263	
-		; A23F	LD (HL),$02	
+LA23F:		; A23F	LD (HL),$02	
 		; A241	LD HL,$8F10	
 		; A244	LD A,($A28E)	
 		; A247	LD B,A	
@@ -1763,7 +1807,7 @@ LA1F8:
 		; A254	LD B,A	
 		; A255	LD A,(HL)	
 		; A256	ADD A,B	
-		; A257	LD (HL),A	
+LA257:		; A257	LD (HL),A	
 		; A258	INC L	
 		; A259	INC L	
 		; A25A	LD A,(HL)	
@@ -1772,16 +1816,38 @@ LA1F8:
 		; A25D	CP $07	
 		; A25F	JR C,$A262	
 		; A261	XOR A	
-		; A262	LD (HL),A	
-		; A263	LD HL,$8F13	
+LA262:		; A262	LD (HL),A	
+LA263:		; A263	LD HL,$8F13	
 		; A266	LD A,(HL)	
 		; A267	INC A	
 		; A268	INC A	
 		; A269	CP $03	
 		; A26B	JR C,$A26E	
-		; A26D	XOR A	
-		; A26E	LD (HL),A	
-	RETURN				; A26F	RET
+	CLR	R0		; A26D	XOR A	
+LA26E:	MOVB	R0, (R3)	; A26E	LD (HL),A	
+	RETURN			; A26F	RET
+
+; Routine
+LA270:
+		; A270	LD DE,($5C76)	; Read RND SEED variable
+		; A274	LD H,E	
+		; A275	LD L,$FD	
+		; A277	LD A,D	
+		; A278	OR A	
+		; A279	SBC HL,DE	
+		; A27B	SBC A,$00	
+		; A27D	SBC HL,DE	
+		; A27F	SBC A,$00	
+		; A281	LD E,A	
+		; A282	LD D,$00	
+		; A284	SBC HL,DE	
+		; A286	JR NC,$A289	
+		; A288	INC HL	
+		; A289	LD ($5C76),HL	; Write RND SEED variable
+	RETURN				; A28C	RET	
+
+LA28D:	.BYTE	002,002
+LA28F:	.WORD	000
 
 ; Routine
 LA291:	MOV	#L8F25, R3		; A291	LD HL,$8F25	Copy const block
@@ -2639,14 +2705,14 @@ LD900:	.BLKB	704.
 ; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
 LDBC0:	.BLKB	832.
 LDF00:	.BLKB	2560.
-LE900:	.BLKB	512.
+LE900:	.BLKB	512.			; Условное начало второго теневого экрана
 LEB00:	.BLKB	4608.
 LFD00:	.BLKB	553.
 LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 
 	.EVEN
-STACK::	.BLKW	100			; For stack
+.BLKW	100			; For stack
 
 ;------------------------------------------------------------------------------
 	.END	START
