@@ -887,7 +887,13 @@ L95E3:	.WORD	136505,136506,137705,137706,141105,141106	; старшая цифра
 
 ; Show the screen
 L95EF:
-;NOTE: 95EF..95FB code clears attributes -- removed
+; Заполняем область маркеров отрисовки
+	MOV	#LFD00, R3	; 95EF	LD HL,$FD00	
+				; 95F2	LD DE,$FD01	
+	MOV	#576., R1	; 95F5	LD (HL),$07	
+10$:	MOVB	#7, (R3)+	; 95F7	LD BC,$023F	
+	SOB	R1, 10$		; 95FA	LDIR	
+;
 	MOV	#<LD900+5>, R3	; 95FC	LD HL,$D905	
 	MOV	R3, R2		; 95FF	LD D,H	
 				; 9600	LD E,L	
@@ -953,15 +959,15 @@ L965D:	MOVB	#12., L9658	; 965D	LD A,$0C
 	ASL	R3		; 9668	ADD HL,HL	
 	ASL	R3		; 9669	ADD HL,HL	
 	ASL	R3		; 966A	ADD HL,HL	
-	ASL	R3		; 966B	ADD HL,HL	
+	ASL	R3		; 966B	ADD HL,HL	HL = A * 16.
 	MOV	R3, R2		; 966C	LD D,H	
 				; 966D	LD E,L	
 	ASL	R3		; 966E	ADD HL,HL	
-	ADD	R2, R3		; 966F	ADD HL,DE	A * 48. -> HL
+	ADD	R2, R3		; 966F	ADD HL,DE	HL = A * 48.
 	ADD	#L6AD0, R3	; 9670	LD DE,$6AD0	
 				; 9673	ADD HL,DE	
 	MOV	#<LD900+5>, R4	; 9674	LD IX,$D905	
-	MOV	#LFD00, R2	; 9678	LD DE,$FD00	
+	MOV	#LFD00, R2	; 9678	LD DE,$FD00	адрес области маркеров отрисовки	
 	MOV	#12., R1	; 967B	LD C,$0C	
 L967D:	MOVB	(R3), R0	; 967D	LD A,(HL)	Начало цикла рисования верхних столбцов фона
 	BIC	#177400, R0
@@ -1002,37 +1008,37 @@ L969C:	MOVB	(R3), R2	; 969C	LD E,(HL)
 				; 96AF	LD H,$00	
 	ASL	R3		; 96B1	ADD HL,HL	
 	ASL	R3		; 96B2	ADD HL,HL	
-	ASL	R3		; 96B3	ADD HL,HL	
+	ASL	R3		; 96B3	ADD HL,HL	HL = A * 8.
 	ADD	#L7100, R3	; 96B4	LD DE,$7100	
-				; 96B7	ADD HL,DE	
-	MOV	#8., R0		; 96B8	LD A,$08	
-	MOV	#32., R2	; 96BA	LD DE,$0020	line length
+				; 96B7	ADD HL,DE	в R3 получили адрес тайла
+	MOV	#8., R0		; 96B8	LD A,$08	счётчик строк = 8.
+	MOV	#32., R2	; 96BA	LD DE,$0020	длина строки 32.
 L96BD:				; 96BD	EX AF,AF'	
-	MOVB	(R3)+, (R4)	; 96BE	LD A,(HL)	
-				; 96BF	LD (IX+$00),A	
-				; 96C2	INC HL	
-	ADD	R2, R4		; 96C3	ADD IX,DE	next line
-				; 96C5	EX AF,AF'	
-	SOB	R0, L96BD	; 96C6	DEC A	
-				; 96C7	JR NZ,$96BD	
+	MOVB	(R3)+, (R4)	; 96BE	LD A,(HL)	<  берём 8 пикселей
+				; 96BF	LD (IX+$00),A	|  пишем 8 пикселей
+				; 96C2	INC HL		|
+	ADD	R2, R4		; 96C3	ADD IX,DE	|  к следующей строке
+				; 96C5	EX AF,AF'	|
+	SOB	R0, L96BD	; 96C6	DEC A		|
+				; 96C7	JR NZ,$96BD	повторяем цикл по строкам
 	MOV	L965B, R3	; 96C9	LD HL,($965B)	
-	INC	R3		; 96CC	INC HL	
-	SOB	R5, L969C	; 96CD	DJNZ $969C	
+	INC	R3		; 96CC	INC HL		|
+	SOB	R5, L969C	; 96CD	DJNZ $969C	повторяем цикл
 	POP	R2		; 96CF	POP DE	
 	POP	R2		; 96D0	POP DE	
 	POP	R4		; 96D1	POP IX	
-	INC	R2		; 96D3	INC DE	
-	INC	R4		; 96D4	INC IX	
+	INC	R2		; 96D3	INC DE		к следующему столбцу
+	INC	R4		; 96D4	INC IX	        к следующему столбцу
 	MOV	L9659, R3	; 96D6	LD HL,($9659)	
 	INC	R3		; 96D9	INC HL	
-				; 96DA	LD A,IXl	
-	BITB	#1, R4		; 96DC	BIT 0,A	
-	BEQ	L967D		; 96DE	JR Z,$967D	
-	DECB	L9658		; 96E0	LD A,($9658)	decrease column height
-				; 96E3	DEC A	
-				; 96E4	LD ($9658),A	
-	DEC	R1		; 96E7	DEC C	
-	BNE	L967D		; 96E8	JR NZ,$967D
+				; 96DA	LD A,IXl	| 
+	BITB	#1, R4		; 96DC	BIT 0,A		|  чётный столбец?
+	BEQ	L967D		; 96DE	JR Z,$967D	да => повторяем цикл
+	DECB	L9658		; 96E0	LD A,($9658)	|  уменьшаем высоту столбца
+				; 96E3	DEC A		|
+				; 96E4	LD ($9658),A	|
+	DEC	R1		; 96E7	DEC C		|
+	BNE	L967D		; 96E8	JR NZ,$967D	повторяем цикл
 ; Цикл рисования нижних столбцов фона
 	MOVB	#1, L9658	; 96EA	LD A,$01	initial column height
 				; 96EC	LD ($9658),A	
@@ -1193,8 +1199,13 @@ L97F6:	PUSH	R1			; 97F6	PUSH BC
 	INC	R5		; 980E	INC C	
 	INC	R5		; 980F	INC C	
 	SOB	R4, L97F4	; 9810	DJNZ $97F4
-;
-; NOTE: 9812..981D code fills attributes, removed
+; Очищаем область маркеров отрисовки
+	MOV	#LFD00,	R3	; 9812	LD HL,$FD00	
+				; 9815	LD DE,$FD01	
+				; 9818	LD (HL),$00	
+	MOV	#576., R1	; 981A	LD BC,$0240	
+2$:	CLRB	(R3)+		; 981D	LDIR	
+	SOB	R1, 2$
 ;
 	JMP	LA546 		; 981F	JP $A546
 
@@ -1711,7 +1722,7 @@ L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 	MOV	R1, R5		; 9AB7	LD IXl,B	|  сохраняем B
 	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
 L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
-	BIS	#177400, R0			;	|  |
+	BIC	#177400, R0			;	|  |
 	MOV	R2, @#176640	; 9ABC	LD (DE),A	|  |  косвенный адрес
 	MOV	R0, @#176642			;	|  |  выводим на экран
 	SUB	#80., R2	; 9ABD	DEC D		|  |  к предыдущей строке экрана
@@ -2254,8 +2265,132 @@ LA4D6:	.WORD	116304
 	.BYTE	131,312,143,137,115,127,125,144,115,137,136,115,147,131,144,130,115,131,144,120,312,376
 	.EVEN
 
+; Отрисовка площадки-препятствия
 LA546:
-	RETURN ;STUB
+	MOV	#LA8D5, R3	; A546	LD HL,$A8D5	
+	CLRB	(R3)		; A549	LD (HL),$00	
+	MOV	#L8A90, R4	; A54B	LD IX,$8A90	
+LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)	
+	CMPB	R0, #376	; A552	CP $FE	
+	BEQ	LA5DA		; A554	JP Z,$A5DA	
+	BHIS	LA5E2		; A557	JP NC,$A5E2	
+	MOVB	6(R4), R0	; A55A	LD A,(IX+$06)	
+	BIC	#177400, R0
+	CMPB	R0, #22.	; A55D	CP $16	
+	BNE	LA5DA		; A55F	JP NZ,$A5DA	
+	MOV	L8F09, R2	; A562	LD DE,($8F09)	
+	MOVB	2(R4), R3	; A566	LD L,(IX+$01)	
+	BIC	#177400, R3
+	SWAB	R3
+	BISB	1(R4), R3	; A569	LD H,(IX+$02)	
+				; A56C	AND A	
+	SUB	R2, R3		; A56D	SBC HL,DE	
+	BIT	#177400, R3	; A56F	LD A,H	
+				; A570	AND A	
+	BEQ	1$		; A571	JP NZ,$A5DA	
+	JMP	L98D4
+1$:	MOVB	11(R4), R0	; A574	LD A,(IX+$09)	
+	BIC	#177763, R0
+	ADD	R0, R0		; A577	ADD A,A	
+	MOV	R0, R1		; A578	LD C,A	
+				; A579	LD B,$00	
+	MOV	#LA592, R3	; A57B	LD HL,$A592	
+	ADD	R1, R3		; A57E	ADD HL,BC	
+	MOVB	4(R4), R1	; A57F	LD C,(IX+$03)	
+	BIC	#177400, R1
+	SWAB	R1
+	BISB	3(R4), R1	; A582	LD B,(IX+$04)	
+				; A585	EX DE,HL	
+	MOV	L8F03, R2	; A586	LD HL,($8F03)	
+	ADD	R1, R2		; A589	ADD HL,BC	
+	MOV	R2, R1		; A58A	LD C,L	
+				; A58B	LD B,H	
+	PUSH	R2		; A58C	PUSH HL	
+				; A58D	EX DE,HL	
+	MOV	LBBC0, R2	; A58E	LD DE,$BBC0	Sprite #5 -- площадка-препятствие
+	JMP	(R3)		; A591	JP (HL)	
+LA592:	CALL	L99D1		; A592	CALL $99D1	Draw sprite with shift by 4px
+	BR	LA5AD		; A595	JP $A5AD	
+	NOP			; A598	NOP	
+				; A599	NOP	
+	CALL	L9A26		; A59A	CALL $9A26	Draw sprite with shift by 2px
+	BR	LA5AD		; A59D	JP $A5AD	
+	NOP			; A5A0	NOP	
+				; A5A1	NOP	
+	CALL	L9A70		; A5A2	CALL $9A70	Draw sprite with no shift
+	BR	LA5AD		; A5A5	JP $A5AD	
+	NOP			; A5A8	NOP	
+				; A5A9	NOP	
+	CALL	L9933		; A5AA	CALL $9933	Draw sprite with shift by -2px
+LA5AD:	POP	R3		; A5AD	POP HL	
+				; A5AE	LD A,H	
+	CMP	R3, #LE900	; A5AF	CP $E9	
+	BLO	LA5DA		; A5B1	JP C,$A5DA	
+		; A5B4	EX DE,HL	
+	SUB	#LE900, R3	; A5B5	SUB $E9	
+	MOV	R3, R0
+				; A5B7	ADD A,A	
+	BIC	#377, R3	; A5B8	ADD A,A	
+	ASR	R3		; A5B9	ADD A,A	
+	ASR	R3		; A5BA	LD L,A	
+	ASR	R3		; A5BB	LD H,$00	
+				; A5BD	ADD HL,HL	
+				; A5BE	ADD HL,HL	
+				; A5BF	LD A,E	
+	BIC	#177740, R0	; A5C0	AND $1F	
+				; A5C2	LD E,A	
+	BIS	R0, R3		; A5C3	LD D,$FD	
+	ADD	#LFD00, R3	; A5C5	ADD HL,DE	
+				; A5C6	LD DE,$FFDE	
+	MOV	#1, R0		; A5C9	LD A,$01	
+	MOV	#4, R1		; A5CB	LD B,$04	
+LA5CD:	MOVB	R0, (R3)+	; A5CD	LD (HL),A	
+				; A5CE	INC HL	
+	MOVB	R0, (R3)+	; A5CF	LD (HL),A	
+				; A5D0	INC HL	
+	MOVB	R0, (R3)	; A5D1	LD (HL),A	
+	SUB	#34., R3	; A5D2	ADD HL,DE	
+	SOB	R1, LA5CD	; A5D3	DJNZ $A5CD
+;	
+		; A5D5	LD HL,$A8D5	
+		; A5D8	LD (HL),$01	
+LA5DA:		; A5DA	LD DE,$0010	
+		; A5DD	ADD IX,DE	
+		; A5DF	JP $A54F	
+LA5E2:		; A5E2	LD A,($A8D5)	
+		; A5E5	AND A	
+		; A5E6	RET Z	
+		; A5E7	LD HL,$E900	
+		; A5EA	LD DE,$D905	
+		; A5ED	LD BC,$1000	
+		; A5F0	LDIR	
+		; A5F2	LD C,$0C	
+		; A5F4	LD B,$02	
+		; A5F6	LD HL,$F900	
+		; A5F9	LD DE,$E905	
+LA5FC:		; A5FC	LD A,$08	
+LA5FE:		; A5FE	PUSH BC	
+		; A5FF	LD B,$00	
+		; A601	PUSH HL	
+		; A602	PUSH DE	
+		; A603	LDIR	
+		; A605	POP DE	
+		; A606	POP HL	
+		; A607	LD BC,$0020	
+		; A60A	ADD HL,BC	
+		; A60B	EX DE,HL	
+		; A60C	ADD HL,BC	
+		; A60D	EX DE,HL	
+		; A60E	POP BC	
+		; A60F	DEC A	
+		; A610	JR NZ,$A5FE	
+		; A612	DEC C	
+		; A613	DEC C	
+		; A614	DJNZ $A5FC	
+	RETURN			; A616	RET	
+
+LA8D5:	.BYTE	0
+	.EVEN
 
 LA8D6:
 	RETURN ;STUB
