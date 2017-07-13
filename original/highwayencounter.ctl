@@ -41,6 +41,7 @@ N $8F1C Referenced from #R$9765, #R$934B, #R$A6B4, #R$A8D6
 B $8F1C,1,1
 N $8F23 Referenced from #R$B195, #R$9118
 B $8F23,1,1
+B $8F4A
 c $8F79 Redirects
 D $8F79 Used by the routine at #R$B0DE.
 N $8F7C This entry point is used by the routines at #R$B41B and #R$B4D0.
@@ -72,7 +73,7 @@ c $9423 Routine
 D $9423 Used by the routine at #R$A291.
 b $9536
 b $95E3
-c $95EF Routine
+c $95EF Routine: Show the screen
 D $95EF Used by the routines at #R$90F2, #R$9C7B, #R$A291 and #R$A367.
 c $9633 Routine
 D $9633 Used by the routine at #R$95EF.
@@ -142,6 +143,7 @@ N $9B5B Sound. This entry point is used by the routine at #R$A694.
   $9B60,2 Output EAR/MIC
   $9B62,2 wait
   $9B65,2 loop
+B $9BFC Data block: 18 records used to draw the shadow screen
 c $9C7B Routine
 D $9C7B Used by the routines at #R$90F2, #R$A34D and #R$A8C5.
 c $A03B Routine
@@ -153,6 +155,10 @@ D $A11B Used by the routines at #R$A03B and #R$A34D.
 N $A1F8 This entry point is used by the routine at #R$A8C5.
 c $A270 Routine
 D $A270 Used by the routines at #R$9A9B, #R$9C7B and #R$A8D6.
+B $A28D,1,1
+B $A28E,1,1
+B $A28F,1,1
+B $A290,1,1
 c $A291 Routine
 D $A291 Used by the routines at #R$90F2 and #R$A367.
 c $A34D Routine (the most used one)

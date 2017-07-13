@@ -8,34 +8,33 @@
 	MOV	(SP)+,RR
 .ENDM
 
+; Game screen start address: #105504
+
+;------------------------------------------------------------------------------
+
 	.ASECT
 	.=001000
 START::
 	CLR	@#177560
-	MOV	SP, OSTACK		; Сохраняем начальное значение SP
 
-	MOV	#GAMESC, R1		; Строка для подготовки игрового экрана
+	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
 	CALL	PRINT
-	CALL	PAUSE			; подождём пока очистится экран
+	CALL	PAUSE		; подождём пока очистится экран
 
-	CALL	LB0DE	; Start point
+	CALL	LB0DE		; Start point
 	CALL	PAUSE
 
-; Game screen start address: #105504
-
 FINISH:
-	MOV	OSTACK, SP	; Восстанавливаем стек
 	MOV	#EXITSC, R1	; Строка очистки экрана перед выходом
 	CALL	PRINT
 	.EXIT
 
-OSTACK:	.WORD	40000		; Начальное значение SP
 GAMESC:	; Строка подготовки игрового экрана
-	.BYTE	33,246,62		; Формат экрана 40x24
-	.BYTE	33,240,63		; Цвет символа
-	.BYTE	33,241,60		; Цвет знакоместа 0
-	.BYTE	33,242,60		; Цвет фона 0
-	.BYTE	14			; Clear screen
+	.BYTE	33,246,62	; Формат экрана 40x24
+	.BYTE	33,240,63	; Цвет символа
+	.BYTE	33,241,60	; Цвет знакоместа 0
+	.BYTE	33,242,60	; Цвет фона 0
+	.BYTE	14		; Clear screen
 	.BYTE	0
 	.EVEN
 EXITSC:	; Строка очистки экрана перед выходом
@@ -44,25 +43,24 @@ EXITSC:	; Строка очистки экрана перед выходом
 	.BYTE	33,241,61	; Цвет знакоместа 1
 	.BYTE	33,242,61	; Цвет фона 1
 	.BYTE	14		; Очистить экран
-	.ASCII	/BYE!/
 	.BYTE	0
 	.EVEN
 
 ; Подпрограмма: Печать строки: R1 = адрес строки, строка завершается 0; портит R0
 PRINT:
-PR0:	MOVB	(R1)+, R0		; Конец строки?
-	BEQ	PR2			; да => завершаем
-PR1:	TSTB	@#177564		; Источник канала 0 готов?
-	BPL	PR1			; нет => ждём
-	MOV	R0, @#177566		; передаём символ в канал 0
-	BR	PR0
-PR2:	RETURN
+10$:	MOVB	(R1)+, R0	; Конец строки?
+	BEQ	30$		; да => выходим
+20$:	TSTB	@#177564	; Источник канала 0 готов?
+	BPL	20$		; нет => ждём
+	MOV	R0, @#177566	; передаём символ в канал 0
+	BR	10$
+30$:	RETURN
 
 ;Подпрограмма: пауза после очистки экрана чтобы ПП закончил работу
 PAUSE:	; Pause to let PPU finish the previous commands
 	MOV	#177777, R5
-PAUSE0:	NOP
-	SOB	R5, PAUSE0
+1$:	NOP
+	SOB	R5, 1$
 	RETURN
 
 ; Подпрограмма: Ожидание символа с клавиатуры: R0 = полученный символ
@@ -79,6 +77,9 @@ WTKEY:	TSTB	@#177560
 
 ;------------------------------------------------------------------------------
 
+	.=1200
+
+SPRITE::
 .INCLUDE /SPRITE.MAC/
 
 ;------------------------------------------------------------------------------
@@ -485,7 +486,7 @@ L8F0E:	.BYTE	0
 L8F0F:	.BYTE	0
 L8F10:	.BLKB	3.
 L8F13:	.BYTE	0
-L8F14:	.BYTE	0
+L8F14:	.BYTE	0	; Текущее действие
 L8F15:	.BYTE	0
 L8F16:	.BYTE	0
 L8F17:	.BYTE	206
@@ -845,42 +846,11 @@ L94EE:	ADD	#16., R4	; 94EE	LD DE,$0010	к следующей записи
 	JMP	L944B		; 94F5	JP NZ,$944B	повтор цикла
 1$:	RETURN			; 94F8	RET
 
-; Data block -- Sprite indices for ZONE digits
-L94F9:	.BYTE	001,004,010,017,020,022		; 0
-	.BYTE	000,006,000,017,000,023		; 1
-	.BYTE	002,004,012,015,020,024		; 2
-	.BYTE	002,004,013,014,021,022		; 3
-	.BYTE	003,006,011,014,000,023		; 4
-	.BYTE	001,005,011,016,021,022		; 5
-	.BYTE	001,005,007,016,020,022		; 6
-	.BYTE	002,004,000,017,000,023		; 7
-	.BYTE	001,004,007,014,020,022		; 8
-	.BYTE	001,004,011,014,021,022		; 9
+;NOTE: Data block L94F9 -- Sprite indices for ZONE digits -- moved to SPRITE.MAC
 ; Data block
 L9536:	.BYTE	000,000,000,000,000
 	.EVEN
-; Data block: big digits sprites
-L953B:	.BYTE	000,000,000,000,000,000,000,000
-	.BYTE	000,374,372,366,016,016,016,016
-	.BYTE	000,374,370,360,000,000,000,000
-	.BYTE	000,000,002,006,016,016,016,016
-	.BYTE	000,077,137,157,160,160,160,160
-	.BYTE	000,077,037,017,000,000,000,000
-	.BYTE	000,000,100,140,160,160,160,160
-	.BYTE	016,006,372,374,372,006,016,016
-	.BYTE	016,006,002,000,002,006,016,016
-	.BYTE	016,006,372,374,370,000,000,000
-	.BYTE	000,000,370,374,372,006,016,016
-	.BYTE	000,000,370,374,370,000,000,000
-	.BYTE	160,140,137,077,137,140,160,160
-	.BYTE	160,140,137,077,037,000,000,000
-	.BYTE	000,000,037,077,137,140,160,160
-	.BYTE	160,140,100,000,100,140,160,160
-	.BYTE	016,016,016,016,366,372,374,000
-	.BYTE	000,000,000,000,360,370,374,000
-	.BYTE	160,160,160,160,157,137,077,000
-	.BYTE	160,160,160,160,140,100,000,000
-	.BYTE	000,000,000,000,017,037,077,000
+;NOTE: Data block L953B: big digits sprites -- moved to SPRITE.MAC
 ; Data block: Адреса на экране -- позиции спрайтов для цифр ZONE
 L95E3:	.WORD	136505,136506,137705,137706,141105,141106	; старшая цифра
 	.WORD	136507,136510,137707,137710,141107,141110	; младшая цифра
@@ -2038,11 +2008,12 @@ LA257:	MOVB	R0, (R3)+	; A257	LD (HL),A
 	CLR	R0		; A261	XOR A	
 LA262:	MOVB	R0, (R3)	; A262	LD (HL),A	
 LA263:	MOV	#L8F13, R3	; A263	LD HL,$8F13	
-		; A266	LD A,(HL)	
-		; A267	INC A	
-		; A268	INC A	
-		; A269	CP $03	
-		; A26B	JR C,$A26E	
+	MOVB	(R3), R0	; A266	LD A,(HL)	
+	BIC	#177400, R0
+	INC	R0		; A267	INC A	
+	INC	R0		; A268	INC A	
+	CMP	R0, #3		; A269	CP $03	
+	BLO	LA26E		; A26B	JR C,$A26E	
 	CLR	R0		; A26D	XOR A	
 LA26E:	MOVB	R0, (R3)	; A26E	LD (HL),A	
 	RETURN			; A26F	RET
@@ -2068,7 +2039,7 @@ LA270:
 
 LA28D:	.BYTE	002
 LA28E:	.BYTE	002
-LA28F:	.WORD	000
+LA28F:	.BYTE	000
 LA290:	.BYTE	002
 	.EVEN
 
@@ -2092,20 +2063,20 @@ LA291:	MOV	#L8F25, R3		; A291	LD HL,$8F25	Copy const block
 LA2B8:
 	MOV	#12., R0		; A2B8	LD A,$0C	
 	MOV	#1, R1			; A2BA	LD B,$01	
-;TODO	CALL	LA34D			; A2BC	CALL $A34D	Main Vorton becomes white-hat and rotates
-;TODO	CMP	R0, #6			; A2BF	CP $06	
-;TODO	BNE	LA2B8			; A2C1	JR NZ,$A2B8	
-		; A2C3	LD A,$01	
-		; A2C5	LD ($8A08),A	
-		; A2C8	XOR A	
-		; A2C9	LD B,$0E	
-		; A2CB	CALL $A34D	
+	CALL	LA34D			; A2BC	CALL $A34D	Main Vorton becomes white-hat and rotates
+	CMP	R0, #6			; A2BF	CP $06	
+	BNE	LA2B8			; A2C1	JR NZ,$A2B8	
+	MOVB	#1, L8A08	; A2C3	LD A,$01	
+				; A2C5	LD ($8A08),A	
+	CLR	R0		; A2C8	XOR A	
+	MOV	#14., R1	; A2C9	LD B,$0E	
+	CALL	LA34D		; A2CB	CALL $A34D	
 LA2CE:		; A2CE	LD A,$08	
 	;TODO
 
 	RETURN ;STUB
 
-; Routine: Main Vorton moves Lasertron
+; Routine: Perform some action
 ; R1 = loop counter
 LA34D:
 	MOVB	R0, L8F14	; A34D	LD ($8F14),A	
@@ -2304,7 +2275,7 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	MOV	L8F03, R2	; A586	LD HL,($8F03)	
 	ADD	R1, R2		; A589	ADD HL,BC	
 	MOV	R2, R1		; A58A	LD C,L	
-				; A58B	LD B,H	
+				; A58B	LD B,H		BC = адрес куда рисовать спрайт
 	PUSH	R2		; A58C	PUSH HL	
 				; A58D	EX DE,HL	
 	MOV	LBBC0, R2	; A58E	LD DE,$BBC0	Sprite #5 -- площадка-препятствие
@@ -2761,6 +2732,7 @@ LB472:	MOV	LB4CB, R3	; B472	LD HL,($B4CB)	restore HL
 	POP	R3		; B497	POP HL	
 	RETURN			; B498	RET	
 
+; Title screen sign "HIGHWAY ENCOUNTER", used by B33C routine
 LB499:	.BYTE	000,127,165,127,120, 000,122,105,125,120
 	.BYTE	000,162,127,167,160, 000,122,125,165,040
 	.BYTE	000,127,165,125,040, 007,167,165,167,167
@@ -3046,7 +3018,7 @@ LB8E2:	MOVB	(R3), R0	; B8E2	LD A,(HL)
 
 ;------------------------------------------------------------------------------
 
-.BLKW	100			; For stack
+.BLKW	40			; For stack
 
 ;------------------------------------------------------------------------------
 	.END	START
