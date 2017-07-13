@@ -47,6 +47,9 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessData7A00(writer);
+            writer.WriteLine();
+
             ProcessSprites953B(writer);
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
@@ -248,6 +251,26 @@ namespace SpriteRotate
                     writer.Write(",");
                 else
                     writer.WriteLine();
+            }
+        }
+
+        static void ProcessData7A00(StreamWriter writer)
+        {
+            writer.WriteLine("L7A00:\t;");
+            int addr = 0x7A00;
+            for (int i = 0; i < 16; i++)
+            {
+                writer.Write("\t.WORD\t");
+                for (int j = 0; j < 8; j++)
+                {
+                    int word = memdmp[addr] + memdmp[addr + 1] * 256;
+                    writer.Write("L" + word.ToString("X4"));
+                    if (j < 7) writer.Write(", ");
+
+                    addr += 2;
+                }
+
+                writer.WriteLine();
             }
         }
 
