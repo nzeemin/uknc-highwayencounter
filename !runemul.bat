@@ -10,7 +10,7 @@ del x-ukncbtl\sys1002.dsk
   echo ####### FAILED to delete old disk image file #######
   exit /b
 )
-copy E:\Work\MyProjects-old\svn-ukncbtl\lib\disks\sys1002.dsk .
+copy x-ukncbtl\sys1002ex.dsk sys1002.dsk
 C:\bin\rt11dsk a sys1002.dsk HWYENC.SAV
 move sys1002.dsk x-ukncbtl\sys1002.dsk
 
