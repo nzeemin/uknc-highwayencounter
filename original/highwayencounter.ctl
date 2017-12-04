@@ -56,6 +56,8 @@ c $8F8A Routine
 D $8F8A Used by the routine at #R$90F2.
 b $8FB0 Text
 B $8FB0 Text to print by #R$B890 routine
+W $9000,240,16
+W $90F0
 c $90F2 Routine
 D $90F2 Used by the routine at #R$B0DE.
 N $9107 This entry point is used by the routine at #R$A694.
