@@ -478,13 +478,14 @@ L8E00:	.BYTE	000,002,000,004,340,377,341,377,377,001,000,004,000,000,001,000
 ;------------------------------------------------------------------------------
 
 ; Variables
+L8F00:	.BYTE	001
+	.BYTE	0	; Filler
 L8F01:	.WORD	L8A00
 L8F03:	.WORD	5352
 L8F05:	.WORD	0
 L8F07:	.WORD	260
 L8F09:	.WORD	200
-L8F00:	.BYTE	001	;NOTE: Moved here to align words without a filler
-L8F0B:	.BLKB	3.	; Адрес в таблице 8D52
+L8F0B:	.WORD	0	; Адрес в таблице 8D52
 L8F0E:	.BYTE	0
 L8F0F:	.BYTE	0
 L8F10:	.BLKB	3.
@@ -502,13 +503,13 @@ L8F22:	.BYTE	0
 L8F23:	.BYTE	0
 ; Initial values for the Variables block
 L8F25:
+	.BYTE	001, 000
 	.WORD	L8A00
 	.WORD	5352
 	.WORD	0
 	.WORD	260
 	.WORD	200
-	.BYTE	001	;NOTE: Moved here to align words without a filler
-	.BYTE	000,000,000, 000,000, 004,000,004,000
+	.BYTE	000,000, 000,000, 004,000,004,000
 	.BYTE	0
 	.BYTE	0
 	.BYTE	0
@@ -2175,11 +2176,11 @@ L9EEA:	MOVB	L8F1D, R0	; 9EEA	LD A,($8F1D)
 		; 9EED	RLA	
 		; 9EEE	JR C,$9EF2	
 	BISB	#20, (R3)	; 9EF0	SET 4,(HL)	
-		; 9EF2	XOR A	
-		; 9EF3	SRL (IX+$08)	
-		; 9EF7	JP Z,$9EFC	
-	MOVB	#4, L8F1D	; 9EFA	LD A,$04	
-				; 9EFC	LD ($8F1D),A	
+	CLR	R0		; 9EF2	XOR A	
+	ASRB	10(R4)		; 9EF3	SRL (IX+$08)	
+	BEQ	L9EFC		; 9EF7	JP Z,$9EFC	
+	MOVB	#4, R0		; 9EFA	LD A,$04	
+L9EFC:	MOVB	R0, L8F1D	; 9EFC	LD ($8F1D),A	
 	JMP	L9E1A		; 9EFF	JP $9E1A
 L9F02:
 	MOV	R2, R3		; 9F02	EX DE,HL	
@@ -2193,8 +2194,8 @@ L9F06:
 	MOVB	#200, 5(R4)	; 9F0F	LD (IX+$05),$80	
 				; 9F13	LD HL,$8F15	
 	BISB	#10, L8F15	; 9F16	SET 3,(HL)	
-	MOV	#25., R1	; 9F18	LD B,$19	
-	CALL	LA414		; 9F1A	CALL $A414	Show score
+	MOV	#25., R1	; 9F18	LD B,$19	plus 25. points
+	CALL	LA414		; 9F1A	CALL $A414	Increment score
 	JMP	L9E1A		; 9F1D	JP $9E1A	
 L9F20:
 	MOV	R2, R3		; 9F20	EX DE,HL	
@@ -2239,8 +2240,8 @@ L9F54:
 	MOVB	#200, (R3)	; 9F67	LD (HL),$80	
 	MOV	L8F15, R3	; 9F69	LD HL,$8F15	
 	BISB	#10, (R3)	; 9F6C	SET 3,(HL)	
-	MOV	#25., R1	; 9F6E	LD B,$19	
-	CALL	LA414		; 9F70	CALL $A414	Show score
+	MOV	#25., R1	; 9F6E	LD B,$19	plus 25. points
+	CALL	LA414		; 9F70	CALL $A414	Increment score
 	JMP	L9E1A		; 9F73	JP $9E1A	
 L9F76:	ADD	#8., R3		; 9F76	LD DE,$0008	
 				; 9F79	ADD HL,DE	
@@ -2620,7 +2621,7 @@ LA28F:	.BYTE	000
 LA290:	.BYTE	002
 	.EVEN
 
-; Routine
+; Routine: DEMO MODE start
 LA291:	MOV	#L8F25, R3		; A291	LD HL,$8F25	Copy const block
 	MOV	#L8F00, R2		; A294	LD DE,$8F00	to variables block
 	MOV	#<L8F25-L8F00>, R1	; A297	LD BC,$0025	
@@ -2668,7 +2669,7 @@ LA350:	PUSH	R1		; A350	PUSH BC
 	BIC	#177400, R0
 	RETURN			; A366	RET
 
-; Routine
+; Routine: DEMO MODE
 LA367:
 	CALL	LA291		; A367	CALL $A291	
 	BR	LA372		; A36A	JR $A372	
@@ -2728,20 +2729,22 @@ LA403:				; A403	LD DE,$5A60	Screen attribute area address
 	CALL	LA478		; A40E	CALL $A478	Show score
 	RETURN			; A411	RET	
 
-; Routine: Show score
+; Routine: Increment score
+; BC = score increment value
 LA414:	MOV	#<LA480+6>, R3	; A414	LD HL,$A486	
-		; A417	LD A,(HL)	
-		; A418	CP $00	
-		; A41A	JR NZ,$A41E	
-		; A41C	LD A,$01	
-		; A41E	INC A	
-		; A41F	CP $0B	
-		; A421	JR NZ,$A428	
-		; A423	LD (HL),$01	
-		; A425	DEC HL	
-		; A426	JR $A417	
-		; A428	LD (HL),A	
-		; A429	DJNZ $A414	
+LA417:	MOVB	(R3), R0	; A417	LD A,(HL)	
+				; A418	CP $00	
+	BNE	LA41E		; A41A	JR NZ,$A41E	
+	MOVB	#1, R0		; A41C	LD A,$01	
+LA41E:	INCB	R0		; A41E	INC A	
+	CMPB	R0, #11.	; A41F	CP $0B	
+	BNE	LA428		; A421	JR NZ,$A428	
+	MOVB	#1, (R3)	; A423	LD (HL),$01	
+	DEC	R3		; A425	DEC HL	
+	BR	LA417		; A426	JR $A417	
+LA428:	MOVB	R0, (R3)	; A428	LD (HL),A	
+	SOB	R1, LA414	; A429	DJNZ $A414	
+; Routine entry point: Show score
 LA42B:	MOV	#141261, R2	; A42B	LD DE,$529D	address on the screen	
 	MOV	#<LA480+6>, R1	; A42E	LD BC,$A486	score	
 LA431:	MOVB	(R1), R0	; A431	LD A,(BC)	
@@ -2759,7 +2762,7 @@ LA431:	MOVB	(R1), R0	; A431	LD A,(BC)
 				; A43E	LD B,$00	
 	ADD	R0, R3		; A440	ADD HL,BC	
 	MOV	R2, R5		; A441	LD C,D	
-	MOV	#5, R1		; A442	LD B,$05	
+	MOV	#5, R1		; A442	LD B,$05	5 lines
 LA444:	MOVB	(R3), R0	; A444	LD A,(HL)	
 	BIC	#177400, R0
 	SWAB	R0
@@ -2899,14 +2902,15 @@ LA5CD:	MOVB	R0, (R3)+	; A5CD	LD (HL),A
 	SUB	#34., R3	; A5D2	ADD HL,DE	
 	SOB	R1, LA5CD	; A5D3	DJNZ $A5CD
 ;	
-		; A5D5	LD HL,$A8D5	
-		; A5D8	LD (HL),$01	
-LA5DA:		; A5DA	LD DE,$0010	
-		; A5DD	ADD IX,DE	
-		; A5DF	JP $A54F	
-LA5E2:		; A5E2	LD A,($A8D5)	
-		; A5E5	AND A	
-		; A5E6	RET Z	
+	MOV	#LA8D5, R3	; A5D5	LD HL,$A8D5	
+	MOVB	#1, (R3)	; A5D8	LD (HL),$01	
+LA5DA:				; A5DA	LD DE,$0010	
+	ADD	#16., R4	; A5DD	ADD IX,DE	
+	BR	LA54F		; A5DF	JP $A54F	
+;
+LA5E2:	MOVB	LA8D5, R0	; A5E2	LD A,($A8D5)	
+				; A5E5	AND A	
+	BEQ	LA616		; A5E6	RET Z	
 		; A5E7	LD HL,$E900	
 		; A5EA	LD DE,$D905	
 		; A5ED	LD BC,$1000	
@@ -2934,7 +2938,7 @@ LA5FE:		; A5FE	PUSH BC
 		; A612	DEC C	
 		; A613	DEC C	
 		; A614	DJNZ $A5FC	
-	RETURN			; A616	RET	
+LA616:	RETURN			; A616	RET	
 
 LA8D5:	.BYTE	0
 	.EVEN
