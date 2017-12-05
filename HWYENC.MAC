@@ -359,8 +359,17 @@ L8800:	.BYTE	376,000,000,000,000,000,002,000,002,000,022,000,004,110,270,022
 	.BYTE	066,230,000,357,357,370,031,000,000,004,015,232,000,066,230,000
 	.BYTE	102,230,000,055,357,370,031,000,000,014,015,232,000,102,230,000
 
-L8A00:	.BYTE	034,250,003,364,300,000,000,005
-L8A08:	.BYTE	000,010,016,000,000,044,260,000
+; Таблица объектов, записи по 16. байт каждая
+;   IX+$01,IX+$02 -- адрес ??
+;   IX+$03,IX+$04 -- адрес на экране, плюс к нему добавляется смещение из $8F03
+;   IX+$05 -- фаза спрайта 0..7 ?
+;   IX+$06 -- ??
+;   IX+$07 -- ?? копируется из (IX+$0С) AND $07, значения 0..7
+;   IX+$08 -- ??
+;   IX+$09 -- горизонтальное смещение (только биты 2-3)
+;   IX+$0A -- смещение от $8F00, где лежит номер спрайта
+;   IX+$0B -- номер процедуры из таблицы $9000
+L8A00:	.BYTE	034,250,003,364,300,000,000,005,000,010,016,000,000,044,260,000
 L8A10:	.BYTE	044,230,003,161,301,160,020,000,001,010,015,000,000,030,130,000
 L8A20:	.BYTE	044,240,003,362,300,160,020,000,001,010,015,000,000,060,144,000
 L8A30:	.BYTE	044,250,003,163,300,160,020,000,001,010,015,000,000,030,160,000
@@ -371,7 +380,7 @@ L8A60:	.BYTE	376,171,002,115,323,030,001,000,004,014,021,026,000,376,260,000
 	.BYTE	376,322,003,035,300,030,001,000,004,004,021,026,000,376,260,000
 
 ; Массив записей длиной по 16. байт каждая
-; последние слова записи -- адрес куда копируются первые 14. байт
+; последнее слово записи -- адрес куда копируются первые 14. байт
 L8A90:	.BYTE	012,172,003,021,305,340,026,000,000,000,015,204,000,012
 	.WORD	<L7B00+360>
 	.BYTE	010,254,003,027,302,120,007,000,000,010,015,232,000,010
@@ -448,9 +457,10 @@ L8D6A:	.WORD	000, L8A10
 	.WORD	000, L8AC0
 	.WORD	000, L8A90
 	.WORD	000, L8AF0
-	.WORD	000
-	.BYTE	377,377,377,377,377,377
-	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
+;	.WORD	000
+;	.BYTE	377,377,377,377,377,377
+;	.BYTE	377,377,377,377,377,377
+	.BYTE	377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
@@ -478,17 +488,19 @@ L8E00:	.BYTE	000,002,000,004,340,377,341,377,377,001,000,004,000,000,001,000
 ;------------------------------------------------------------------------------
 
 ; Variables
+; NOTE: Часть переменных находится из кода как ($8F00 + смещение), поэтому важно смещение от начала области переменных
 L8F00:	.BYTE	001
 	.BYTE	0	; Filler
 L8F01:	.WORD	L8A00
-L8F03:	.WORD	5352
+L8F03:	.WORD	5352	; Смещение при отрисовке спрайтов, добавляется к адресу на экране
 L8F05:	.WORD	0
 L8F07:	.WORD	260
 L8F09:	.WORD	200
-L8F0B:	.WORD	0	; Адрес в таблице 8D52
-L8F0E:	.BYTE	0
+	.BYTE	0	; Filler
+L8F0D:	.BYTE	0	; +015 Номер спрайта Vorton
+L8F0E:	.BYTE	0	; +016 Номер спрайта Lasertron
 L8F0F:	.BYTE	0
-L8F10:	.BLKB	3.
+L8F10:	.BLKB	3.	; +020, +021, +022 Номера спрайтов
 L8F13:	.BYTE	0
 L8F14:	.BYTE	0	; Текущее действие
 L8F15:	.BYTE	0
@@ -496,6 +508,7 @@ L8F16:	.BYTE	0
 L8F17:	.BYTE	206
 L8F18:	.BYTE	226	; Low part of attribute address $5Axx
 L8F19:	.BYTE	326
+L8F0B:	.WORD	0	; Адрес в таблице 8D52; NOTE: Перенесено сюда для правильного выравнивания других полей
 L8F1A:	.WORD	6654
 L8F1C:	.BYTE	1
 L8F1D:	.BLKB	5.
@@ -503,25 +516,27 @@ L8F22:	.BYTE	0
 L8F23:	.BYTE	0
 ; Initial values for the Variables block
 L8F25:
-	.BYTE	001, 000
+	.BYTE	001
+	.BYTE	0	; Filler
 	.WORD	L8A00
 	.WORD	5352
 	.WORD	0
 	.WORD	260
 	.WORD	200
-	.BYTE	000,000, 000,000, 004,000,004,000
+	.BYTE	0	; Filler
+	.BYTE	000,000,000, 004,000,004,000
 	.BYTE	0
 	.BYTE	0
 	.BYTE	0
 	.BYTE	206
 	.BYTE	226
 	.BYTE	326
+	.WORD	0
 	.WORD	6654
 	.BYTE	001
 	.BYTE	000,000,000,000,000
 	.BYTE	000
 L8F48:	.BYTE	0
-	.WORD	0	;HACK to align L8F4A to proper address
 L8F4A:	.BYTE	000,000,030,026,050,054,060,102,070,130,100,156,110,204,120,232
 	.BYTE	130,260,020,306,140,334,160,000,040,026,170,054,170,102,070,130
 	.BYTE	050,156,340,204,370,232,350,260,360,306,150,334,303,160,242
@@ -550,7 +565,7 @@ L9000:	.WORD	L9ED7,L9FDF,L9F20,L9F20,L9F20,L9F20,L9F20,L9ED7
 ;------------------------------------------------------------------------------
 
 ; Routine
-L92CE:	MOV	#L8D52, R3	; 92CE	LD HL,$8D52	
+L92CE:	MOV	#L8D52, R3	; 92CE	LD HL,$8D52	адрес начала таблицы
 	CLRB	(R3)		; 92D1	LD (HL),$00	
 	MOV	#L8A90, R4	; 92D3	LD IX,$8A90	адрес начала массива записей
 L92D7:	MOVB	(R4), R0	; 92D7	LD A,(IX+$00)	
@@ -746,9 +761,9 @@ L9407:	MOVB	5(R4), R0	; 9407	LD A,(IX+$05)	<
 	BIC	#177400, R0			;	|
 	CMPB	R0, #128.	; 940A	CP $80		|
 	BLO	L941A		; 940C	JR C,$941A	|
-	CMPB	R0, 224.	; 940E	CP $E0		|
+	CMPB	R0, #224.	; 940E	CP $E0		|
 	BHIS	L941A		; 9410	JR NC,$941A	|
-	MOVB	(R4), #376	; 9412	LD (IX+$00),$FE	|
+	MOVB	#376, (R4)	; 9412	LD (IX+$00),$FE	|
 	BICB	#200, 10(R4)	; 9416	RES 7,(IX+$08)	|
 L941A:	ADD	R1, R4		; 941A	ADD IX,BC	|
 	CMP	R4, #L8A00	; 941C	LD A,IXh	| дошли до 8A00 ?
@@ -757,13 +772,13 @@ L941A:	ADD	R1, R4		; 941A	ADD IX,BC	|
 	RETURN			; 9422	RET
 
 L9423:
-	MOV	#L8A00, R4	; 9423	LD IX,$8A00
+	MOV	#L8A00, R4	; 9423	LD IX,$8A00	адрес таблицы объектов
 	MOVB	#14., 12(R4)	; 9427	LD (IX+$0A),$0E	
 	CLRB	6(R4)		; 942B	LD (IX+$06),$00	
-	MOV	#16., R2	; 942F	LD DE,$0010	
+	MOV	#16., R2	; 942F	LD DE,$0010	ширина записи = 16.	
 	MOVB	#4, R1		; 9432	LD B,$04	счётчик цикла
 L9434:	ADD	R2, R4		; 9434	ADD IX,DE	<
-	MOV	#13., 12(R4)	; 9436	LD (IX+$0A),$0D	|
+	MOV	#13., 12(R4)	; 9436	LD (IX+$0A),$0D	|  смещение от $8F00 для выбора спрайта
 	MOV	#16., 6(R4)	; 943A	LD (IX+$06),$10	|
 	SOB	R1, L9434	; 943E	DJNZ $9434	продолжаем цикл
 	MOV	#L8A90, R3	; 9440	LD HL,$8A90	
@@ -788,10 +803,10 @@ L9468:	BIC	#177760, R0	; 9468	AND $0F
 				; 946B	LD E,A	
 	ADD	R0, R3		; 946C	ADD HL,DE	
 	MOVB	(R3)+, R0	; 946D	LD A,(HL)	
-	MOVB	R0, 5(R4)	; 946E	LD (IX+$05),A	
+	MOVB	R0, 5(R4)	; 946E	LD (IX+$05),A	фаза спрайта ??
 				; 9471	INC HL	
 	MOVB	(R3), R0	; 9472	LD A,(HL)	
-	MOVB	R0, 13(R4)	; 9473	LD (IX+$0B),A	
+	MOVB	R0, 13(R4)	; 9473	LD (IX+$0B),A	записываем номер процедуры
 	MOV	R4, R2		; 9476	LD E,IXl	
 				; 9478	LD D,IXh	
 				; 947A	LD BC,$000D	
@@ -861,7 +876,7 @@ L94A4:	MOVB	(R4), R0	; 94A4	LD A,(IX+$00)
 	SUB	R5, R0
 	BIC	#177771, R0	; 94E7	AND $06	
 	ASLB	R0		; 94E9	SLA A	
-	MOVB	R0, 11(R4)	; 94EB	LD (IX+$09),A	
+	MOVB	R0, 11(R4)	; 94EB	LD (IX+$09),A	сохраняем горизонтальное смещение
 L94EE:	ADD	#16., R4	; 94EE	LD DE,$0010	к следующей записи
 				; 94F1	ADD IX,DE	
 	POP	R1		; 94F3	POP BC		0, восстанавливаем счётчик
@@ -1143,41 +1158,41 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 ; NOTE: 9799..97A4 code fills attributes, removed
 ;
 ; Вывод экрана D905 на реальный экран
-	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
-	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+	MOV	#176640, R4	; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#176642, R5	; Адрес порта данных косвенной записи УКНЦ
 	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905	
 	MOV	#105504, R2	; 97A9	LD DE,$4000	Screen address
-	MOV	#144., R0		; Количество копируемых строк
+	MOV	#144., R0	; Количество копируемых строк
 10$:	PUSH	R0
-	MOV	#32., R1		; Байт в строке
+	MOV	#32., R1	; Байт в строке
 20$:	MOVB	(R3)+, R0
 	BIC    	#177400, R0
-	MOV	R2, (R4)		; Устанавливаем адрес
-	MOV	R0, (R5)		; Пишем в экран	
+	MOV	R2, (R4)	; Устанавливаем адрес
+	MOV	R0, (R5)	; Пишем в экран	
 	INC	R2
 	SOB	R1, 20$
-	ADD	#<80.-32.>, R2		; Следующая строка
+	ADD	#<80.-32.>, R2	; Следующая строка
 	POP	R0
 	SOB	R0, 10$
 ; Копирование подготовленного теневого экрана на второй теневой экран
 	MOV	#<LD900+1005>, R3	; 97DF	LD HL,$DB05	
-	MOV	#LEB00, R2		; 97E2	LD DE,$EB00	
-	MOV	#4096., R1		; 97E5	LD BC,$1000	
-1$:	MOVB	(R3)+, (R2)+		; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
+	MOV	#LEB00, R2	; 97E2	LD DE,$EB00	
+	MOV	#4096., R1	; 97E5	LD BC,$1000	
+1$:	MOVB	(R3)+, (R2)+	; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
 	SOB	R1, 1$
-	MOV	#15., R5		; 97EA	LD C,$0F	
-	MOV	#2., R4			; 97EC	LD B,$02	Осталось скопировать 2x8 строк
+	MOV	#15., R5	; 97EA	LD C,$0F	
+	MOV	#2., R4		; 97EC	LD B,$02	Осталось скопировать 2x8 строк
 	MOV	#<LD900+22.>, R3	; 97EE	LD HL,$D916	
 	MOV	#<LE900+17.>, R2	; 97F1	LD DE,$E911	
-L97F4:	MOV	#8., R0			; 97F4	LD A,$08	
-L97F6:	PUSH	R1			; 97F6	PUSH BC	
-	MOV	R5, R1			; 97F7	LD B,$00	
-	PUSH	R3			; 97F9	PUSH HL	
-	PUSH	R2			; 97FA	PUSH DE	
-1$:	MOVB	(R3)+, (R2)+		; 97FB	LDIR	
+L97F4:	MOV	#8., R0		; 97F4	LD A,$08	
+L97F6:	PUSH	R1		; 97F6	PUSH BC	
+	MOV	R5, R1		; 97F7	LD B,$00	
+	PUSH	R3		; 97F9	PUSH HL	
+	PUSH	R2		; 97FA	PUSH DE	
+1$:	MOVB	(R3)+, (R2)+	; 97FB	LDIR	
 	SOB	R1, 1$
-	POP	R2			; 97FD	POP DE	
-	POP	R3			; 97FE	POP HL	
+	POP	R2		; 97FD	POP DE	
+	POP	R3		; 97FE	POP HL	
 				; 97FF	LD BC,$0020	
 	ADD	#40, R3		; 9802	ADD HL,BC	
 				; 9803	EX DE,HL	
@@ -1205,7 +1220,7 @@ L97F6:	PUSH	R1			; 97F6	PUSH BC
 
 ; Routine
 L9822:
-	MOV	#L8D52, R3	; 9822	LD HL,$8D52	
+	MOV	#L8D52, R3	; 9822	LD HL,$8D52	адрес начала таблицы
 	MOV	(R3), R0	; 9825	LD A,(HL)	
 				; 9826	AND A	
 	BEQ	L9859		; 9827	JP Z,$9859	
@@ -1284,7 +1299,7 @@ L9866:	MOVB	(R4), R0	; 9866	LD A,(IX+$00)
 	ASR	R1		; 9894	SRL B	
 	ADD	R1, R0		; 9896	ADD A,B	
 	INC	R0		; 9897	INC A	
-	MOV	#L8D52, R3	; 9898	LD HL,$8D52	
+	MOV	#L8D52, R3	; 9898	LD HL,$8D52	адрес начала таблицы
 L989B:	CMPB	R0, (R3)	; 989B	CP (HL)	
 	BHIS	L98A4		; 989C	JR NC,$98A4	
 	INC	R3		; 989E	INC L		NOTE: первый байт записи заменён на слово
@@ -1302,7 +1317,7 @@ L98A4:	MOV	R0, R5		; 98A4	EX AF,AF'	save A
 	INC	R2		; 98AE	INC E	
 	INC	R2		; 98AF	INC E	
 	MOV	R2, L8F0B	; 98B0	LD ($8F0B),DE	Сохраняем адрес
-	MOVB	R0, (R2)	; 98B4	LD (DE),A	
+	CLRB	(R2)		; 98B4	LD (DE),A	сначала очищаем
 	BR	L98CA		; 98B5	JP $98CA	
 L98B8:	PUSH	R3		; 98B8	PUSH HL	
 	MOV	R2, R0		; 98B9	LD A,E	
@@ -1310,13 +1325,16 @@ L98B8:	PUSH	R3		; 98B8	PUSH HL
 	MOV	R0, R1		; 98BB	LD C,A	
 				; 98BC	LD B,$00	
 	INC	R1		; 98BE	INC C	
+	INC	R1
 	MOV	R2, R3		; 98BF	LD L,E	
 	INC	R2		; 98C0	INC E		NOTE: первый байт записи заменён на слово
 	INC	R2
 	INC	R2		; 98C1	INC E	
 	INC	R2		; 98C2	INC E	
 	MOV	R2, L8F0B	; 98C3	LD ($8F0B),DE	Сохраняем адрес
-1$:	MOVB	-(R3), -(R2)	; 98C7	LDDR	
+1$:	MOVB	(R3), (R2)	; 98C7	LDDR	
+	DEC	R3
+	DEC	R2
 	SOB	R1, 1$
 	POP	R3		; 98C9	POP HL	
 L98CA:	MOV	R5, R0		; 98CA	EX AF,AF'	restore A
@@ -1331,7 +1349,7 @@ L98CA:	MOV	R5, R0		; 98CA	EX AF,AF'	restore A
 L98D4:				; 98D4	LD DE,$0010	
 	ADD	#16., R4	; 98D7	ADD IX,DE	
 	BR	L9866		; 98D9	JP $9866	
-L98DC:	MOV	#L8D52, R3	; 98DC	LD HL,$8D52	
+L98DC:	MOV	#L8D52, R3	; 98DC	LD HL,$8D52	адрес начала таблицы
 	MOVB	(R3), R0	; 98DF	LD A,(HL)	
 	BNE	L98E2		; 98E0	AND A	
 	RETURN			; 98E1	RET Z	
@@ -1347,18 +1365,18 @@ L98E2:
 	PUSH	R3		; 98EB	PUSH HL	
 	MOVB	12(R4), R3	; 98EC	LD H,$8F	
 	BIC	#177400, R3
-	ADD	#L8F00, R3	; 98EE	LD L,(IX+$0A)	WARN: обращение по индексу к области переменных 8F00
-	MOVB	(R3), R0	; 98F1	LD A,(HL)
+	ADD	#L8F00, R3	; 98EE	LD L,(IX+$0A)	WARN: обращение по индексу к области переменных $8F00 по смещению
+	MOVB	(R3), R0	; 98F1	LD A,(HL)	базовый номер спрайта
 	BIC	#177400, R0	
-	MOVB	5(R4), R5	; 98F2	ADD A,(IX+$05)	
+	MOVB	5(R4), R5	; 98F2	ADD A,(IX+$05)	добавляем фазу спрайта
 	BIC	#177400, R5
 	ADD	R5, R0
-	MOV	#L7A00, R3	; 98F5	LD L,A	
+	MOV	#L7A00, R3	; 98F5	LD L,A		таблица адресов спрайтов
 	ADD	R0, R3		; 98F6	LD H,$7A	
 	MOV	(R3), R2	; 98F8	LD E,(HL)	
 				; 98F9	INC HL	
 				; 98FA	LD D,(HL)	DE = адрес спрайта
-	MOVB	11(R4), R0	; 98FB	LD A,(IX+$09)	
+	MOVB	11(R4), R0	; 98FB	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)	
 	BIC	#177763, R0
 	ADD	R0, R0		; 98FE	ADD A,A	
 	MOV	R0, R1		; 98FF	LD C,A	
@@ -1751,8 +1769,8 @@ L9ACA:						;	|
 	SUB	R0, R1		; 9AE1	LD A,$6A	
 	MOV	R1, R0		; 9AE3	SUB B	
 	ADD	R0, R0		; 9AE4	ADD A,A	
-L9AE5:	MOV	#200., R1	; 9AE5	LD B,$C8	
-L9AE7:	SOB	R1, L9AE7	; 9AE7	DJNZ $9AE7	задержка ???
+L9AE5:	MOV	#30., R1	; 9AE5	LD B,$C8	
+L9AE7:	SOB	R1, L9AE7	; 9AE7	DJNZ $9AE7	задержка
 				; 9AE9	DEC A	
 	SOB	R0, L9AE5	; 9AEA	JR NZ,$9AE5	
 	BR	L9B72		; 9AEC	JP $9B72	
@@ -1779,7 +1797,7 @@ L9B01:		; 9B01	LD HL,$9B46
 		; 9B19	LD C,$0A	
 		; 9B1B	LD D,$3F	
 		; 9B1D	LD E,$08	
-		; 9B1F	JP $9B2C	
+		; 9B1F	JP $9B2C	Sound	
 		; 9B22	BIT 7,A	
 		; 9B24	JR Z,$9B4F	
 		; 9B26	LD C,$02	
@@ -1871,7 +1889,7 @@ L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)
 	CMP	R0, 220.	; 9CE0	CP $DC
 	BLO	L9CEF		; 9CE2	JR C,$9CEF	
 	MOVB	#376, (R4)	; 9CE4	LD (IX+$00),$FE	
-	BICB	#128., 10(R4)	; 9CE8	RES 7,(IX+$08)	
+	BICB	#200, 10(R4)	; 9CE8	RES 7,(IX+$08)	
 	JMP	L9E1A		; 9CEC	JP $9E1A	
 L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A	
 	MOV	L8F15, R3	; 9CF2	LD HL,$8F15	
@@ -1965,16 +1983,15 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl
 	MOVB	R0, (R4)	; 9D86	LD (IX+$00),A	
 	MOV	#7, R3		; 9D89	LD HL,$0007	
 	ADD	R1, R3		; 9D8C	ADD HL,BC	
-	MOVB	2(R4), R3	; 9D8D	LD (IX+$01),L	
-	BIC	#177400, R3
+	MOVB	R3, 1(R4)	; 9D8D	LD (IX+$01),L	
 	SWAB	R3
-	BISB	1(R4), R3	; 9D90	LD (IX+$02),H	
+	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	
 	MOV	LA039, R3	; 9D93	LD HL,($A039)
 	INC	R3		; 9D96	INC L	
 	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	
 	BIC	#177400, R0
 				; 9D98	INC L	
-	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	
+	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	добавляем горизонтальное смещение (только биты 2-3)
 	BIC	#177400, R5
 	ADD	R5, R0
 	CMP	R0, #13.	; 9D9C	CP $0D	
@@ -1986,7 +2003,7 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl
 L9DA9:	SUB	#16., R0	; 9DA9	SUB $10	
 L9DAB:	INC	R3		; 9DAB	INC L	
 	INC	R3		; 9DAC	INC L	
-L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	
+L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	сохраняем горизонтальное смещение
 	MOVB	(R3)+, R2	; 9DB0	LD E,(HL)	
 	BIC	#177400, R2	; 9DB1	INC L	
 	SWAB	R2
@@ -2015,8 +2032,10 @@ L9DC8:	CALL	LA270		; 9DC8	CALL $A270
 	BIC	#177400, R0
 	MOV	#L8FF0, R3	; 9DD3	LD HL,$8FF0	
 	ADD	R2, R3		; 9DD6	ADD HL,DE	
-	BICB	(R3)+, R0	; 9DD7	AND (HL)	TODO: Здесь надо проверить/уточнить операцию
-				; 9DD8	INC HL	
+	MOVB	(R3), R5	; 9DD7	AND (HL)	TODO: Здесь надо проверить/уточнить операцию
+	COMB	R5
+	BICB	R5, R0
+	INC	R3		; 9DD8	INC HL	
 	BISB	(R3), R0	; 9DD9	OR (HL)	
 	MOVB	R0, 7(R4)	; 9DDA	LD (IX+$07),A	
 	BR	L9E1A		; 9DDD	JP $9E1A	
@@ -2163,8 +2182,8 @@ L9ED2:	INC	R3		; 9ED2	INC L
 	INC	R3		; 9ED3	INC L	
 	BISB	#100, R0	; 9ED4	SET 6,A	
 	MOVB	R0, (R3)	; 9ED6	LD (HL),A
-L9ED7:
-	MOV	#L8F15, R3	; 9ED7	LD HL,$8F15	
+; Точка продолжения 000
+L9ED7:	MOV	#L8F15, R3	; 9ED7	LD HL,$8F15	
 	MOVB	6(R4), R0	; 9EDA	LD A,(IX+$06)	
 	BIC	#177400, R0	; 9EDD	AND A	
 	BEQ	L9EEA		; 9EDE	JR Z,$9EEA	
@@ -2173,10 +2192,10 @@ L9ED7:
 	BISB	#20, (R3)	; 9EE5	SET 4,(HL)	
 L9EE7:	JMP	L9E1A		; 9EE7	JP $9E1A	
 L9EEA:	MOVB	L8F1D, R0	; 9EEA	LD A,($8F1D)	
-		; 9EED	RLA	
-		; 9EEE	JR C,$9EF2	
+	ROLB	R0		; 9EED	RLA	
+	BLO	L9EF2		; 9EEE	JR C,$9EF2	
 	BISB	#20, (R3)	; 9EF0	SET 4,(HL)	
-	CLR	R0		; 9EF2	XOR A	
+L9EF2:	CLR	R0		; 9EF2	XOR A	
 	ASRB	10(R4)		; 9EF3	SRL (IX+$08)	
 	BEQ	L9EFC		; 9EF7	JP Z,$9EFC	
 	MOVB	#4, R0		; 9EFA	LD A,$04	
@@ -2184,7 +2203,7 @@ L9EFC:	MOVB	R0, L8F1D	; 9EFC	LD ($8F1D),A
 	JMP	L9E1A		; 9EFF	JP $9E1A
 L9F02:
 	MOV	R2, R3		; 9F02	EX DE,HL	
-	BR	L9E45		; 9F03	JP $9E45
+	JMP	L9E45		; 9F03	JP $9E45
 L9F06:
 	MOV	R2, R3		; 9F06	EX DE,HL	
 	DEC	R3		; 9F07	DEC L	
@@ -2442,7 +2461,7 @@ LA181:	DEC	R0		; A181	DEC A
 	CALL	LA10B		; A18B	CALL Z,$A10B	
 1$:	TSTB	R0		; A18E	AND A	
 	BNE	LA194		; A18F	JR NZ,$A194	
-	MOVB	#176, (R3)	; A191	LD (HL),$FE	
+	MOVB	#376, (R3)	; A191	LD (HL),$FE	
 	INC	R0		; A193	INC A	
 LA194:	DEC	R0		; A194	DEC A	
 	MOVB	R0, (R2)	; A195	LD (DE),A	
@@ -2455,7 +2474,7 @@ LA194:	DEC	R0		; A194	DEC A
 	CALL	LA10B		; A19E	CALL Z,$A10B	
 1$:	TSTB	R0		; A1A1	AND A	
 	BNE	LA1A7		; A1A2	JR NZ,$A1A7	
-	MOVB	#176, (R3)	; A1A4	LD (HL),$FE	
+	MOVB	#376, (R3)	; A1A4	LD (HL),$FE	
 	INC	R0		; A1A6	INC A	
 LA1A7:	DEC	R0		; A1A7	DEC A	
 	MOVB	R0, (R2)	; A1A8	LD (DE),A	
@@ -2486,7 +2505,9 @@ LA1A7:	DEC	R0		; A1A7	DEC A
 	MOVB	(R2), R0	; A1C9	LD A,(DE)	
 				; A1CA	AND A	
 	BNE	LA1F8		; A1CB	JR NZ,$A1F8	
-LA1CD:		; A1CD	EX DE,HL	
+LA1CD:	PUSH	R2		; A1CD	EX DE,HL
+	MOV	R3, R2
+	POP	R3	
 	MOVB	#22., (R3)	; A1CE	LD (HL),$16	
 				; A1D0	LD HL,$8F22	
 	MOVB	#2, L8F22	; A1D3	LD (HL),$02	
@@ -2498,11 +2519,11 @@ LA1CD:		; A1CD	EX DE,HL
 	INC	R3		; A1DE	INC L	
 	INC	R2		; A1DF	INC E	
 	INC	R2		; A1E0	INC E	
-	MOVB	(R3)+, (R2)+	; A1E1	LDI	
+	MOVB	(R3)+, (R2)+	; A1E1	LDI		копируем байт	
 	INC	R3		; A1E3	INC L	
 	INC	R2		; A1E4	INC E	
 				; A1E5	LD A,(HL)	
-	MOVB	(R3), (R2)	; A1E6	LD (DE),A	
+	MOVB	(R3), (R2)	; A1E6	LD (DE),A	копируем байт
 ;
 	MOVB	L8F18, R0	; A1E7	LD A,($8F18)	
 	BIC	#177400, R0
@@ -2518,7 +2539,7 @@ LA1F8:
 	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	
 	MOVB	7(R4), R0	; A1FF	LD A,(IX+$07)	
 	ADD	R0, R0		; A202	ADD A,A	
-	MOVB	R0, (R3)	; A203	LD (HL),A	
+	MOVB	R0, (R3)	; A203	LD (HL),A	сохраняем номер спрайта
 	MOV	#LA28F, R3	; A204	LD HL,$A28F	
 	CLR	R0		; A207	XOR A	
 	CMPB	(R3), R0	; A208	CP (HL)	
@@ -2622,33 +2643,33 @@ LA290:	.BYTE	002
 	.EVEN
 
 ; Routine: DEMO MODE start
-LA291:	MOV	#L8F25, R3		; A291	LD HL,$8F25	Copy const block
-	MOV	#L8F00, R2		; A294	LD DE,$8F00	to variables block
+LA291:	MOV	#L8F25, R3	; A291	LD HL,$8F25	Copy const block
+	MOV	#L8F00, R2	; A294	LD DE,$8F00	to variables block
 	MOV	#<L8F25-L8F00>, R1	; A297	LD BC,$0025	
-1$:	MOVB	(R3)+, (R2)+		; A29A	LDIR		copy
+1$:	MOVB	(R3)+, (R2)+	; A29A	LDIR		copy
 	SOB	R1, 1$
-	CALL	LA3D3			; A29C	CALL $A3D3	Prepare screen and indicators
-	CALL	L9423			; A29F	CALL $9423	
-	CALL	L92CE			; A2A2	CALL $92CE	
-	CALL	L95EF			; A2A5	CALL $95EF	Show the screen
-	MOV	#377, L8A90		; A2A8	LD A,$FF	
-					; A2AA	LD ($8A90),A	
-	MOV	#1, L8A08		; A2AD	LD A,$01	
-					; A2AF	LD ($8A08),A	
-	CLR	R0			; A2B2	XOR A	
-	MOV	#16., R1		; A2B3	LD B,$10	loop counter = 16.
-	CALL	LA34D			; A2B5	CALL $A34D	Main Vorton moves Lasertron
+	CALL	LA3D3		; A29C	CALL $A3D3	Prepare screen and indicators
+	CALL	L9423		; A29F	CALL $9423	
+	CALL	L92CE		; A2A2	CALL $92CE	
+	CALL	L95EF		; A2A5	CALL $95EF	Show the screen
+	MOV	#377, L8A90	; A2A8	LD A,$FF	
+				; A2AA	LD ($8A90),A	
+	MOV	#1, <L8A00+8.>	; A2AD	LD A,$01	
+				; A2AF	LD ($8A08),A	
+	CLR	R0		; A2B2	XOR A	
+	MOV	#16., R1	; A2B3	LD B,$10	loop counter = 16.
+	CALL	LA34D		; A2B5	CALL $A34D	Main Vorton moves Lasertron
 LA2B8:
-;	MOV	#12., R0		; A2B8	LD A,$0C	
-;	MOV	#1, R1			; A2BA	LD B,$01	
-;	CALL	LA34D			; A2BC	CALL $A34D	Main Vorton becomes white-hat and rotates
-;	CMP	R0, #6			; A2BF	CP $06	
-;	BNE	LA2B8			; A2C1	JR NZ,$A2B8	
-;	MOVB	#1, L8A08	; A2C3	LD A,$01	
-;				; A2C5	LD ($8A08),A	
-;	CLR	R0		; A2C8	XOR A	
-;	MOV	#14., R1	; A2C9	LD B,$0E	
-;	CALL	LA34D		; A2CB	CALL $A34D	
+	MOV	#12., R0	; A2B8	LD A,$0C	
+	MOV	#1, R1		; A2BA	LD B,$01	
+	CALL	LA34D		; A2BC	CALL $A34D	Main Vorton becomes white-hat and rotates
+	CMP	R0, #6		; A2BF	CP $06	
+	BNE	LA2B8		; A2C1	JR NZ,$A2B8	
+	MOVB	#1, <L8A00+8.>	; A2C3	LD A,$01	
+				; A2C5	LD ($8A08),A	
+	CLR	R0		; A2C8	XOR A	
+	MOV	#14., R1	; A2C9	LD B,$0E	
+	CALL	LA34D		; A2CB	CALL $A34D	
 LA2CE:		; A2CE	LD A,$08	
 	;TODO
 
@@ -2671,13 +2692,43 @@ LA350:	PUSH	R1		; A350	PUSH BC
 
 ; Routine: DEMO MODE
 LA367:
-	CALL	LA291		; A367	CALL $A291	
+	CALL	LA291		; A367	CALL $A291	Show the animation
 	BR	LA372		; A36A	JR $A372	
 LA36C:	CALL	L92CE		; A36C	CALL $92CE	
 	CALL	L95EF		; A36F	CALL $95EF	Show the screen
 LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 	CALL	LB890		; A375	CALL $B890	Print Text
+	MOV	#40., R1	; A378	LD B,$28	
+LA37A:	PUSH	R1		; A37A	PUSH BC	
+	CALL	LA8C5		; A37B	CALL $A8C5	
+	POP	R1		; A37E	POP BC
+		; A37F	XOR A	
+		; A380	IN A,($FE)	
+		; A382	CPL	
+		; A383	AND $1F	
+		; A385	RET NZ	
+	SOB	R1, LA37A	; A386	DJNZ $A37A
+	MOVB	L8F00, R0	; A388	LD A,($8F00)	
+	CMPB	R0, #31.	; A38B	CP $1F	
+	BHIS	LA3A8		; A38D	JR NC,$A3A8	
+	MOV	#<L8A40+8.>, R3	; A38F	LD HL,$8A48	
+	CLRB	(R3)		; A392	LD (HL),$00	
+	MOV	L8F01, R3	; A394	LD HL,($8F01)	
+	MOVB	#376, (R3)+	; A397	LD (HL),$FE	
+				; A399	INC L	
+		; A39A	LD E,(HL)	
+		; A39B	INC L	
+		; A39C	LD D,(HL)	
+		; A39D	EX DE,HL	
+		; A39E	LD BC,$00B0	
+		; A3A1	ADD HL,BC	
+		; A3A2	EX DE,HL	
+		; A3A3	LD (HL),D	
+		; A3A4	DEC L	
+		; A3A5	LD (HL),E	
 
+;	BR	LA36C		; A3A6	JR $A36C	
+LA3A8:
 	;TODO
 
 ;	MOV	#LA4D6, R3	; A3B7	LD HL,$A4D6	
@@ -2690,9 +2741,9 @@ LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 
 ; Prepare screen and indicators
 LA3D3:
-	MOV	#GAMESC, R1		; Строка для подготовки игрового экрана
+	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
 	CALL	PRINT
-	CALL	PAUSE			; подождём пока очистится экран
+	CALL	PAUSE		; подождём пока очистится экран
 ;
 	MOV	#L6020, R3	; A3E0	LD HL,$6020	
 	MOV	#135304, R2	; A3E3	LD DE,$5060	
@@ -2839,7 +2890,7 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 				; A570	AND A	
 	BEQ	1$		; A571	JP NZ,$A5DA	
 	JMP	L98D4
-1$:	MOVB	11(R4), R0	; A574	LD A,(IX+$09)	
+1$:	MOVB	11(R4), R0	; A574	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)
 	BIC	#177763, R0
 	ADD	R0, R0		; A577	ADD A,A	
 	MOV	R0, R1		; A578	LD C,A	
@@ -2939,6 +2990,14 @@ LA5FE:		; A5FE	PUSH BC
 		; A613	DEC C	
 		; A614	DJNZ $A5FC	
 LA616:	RETURN			; A616	RET	
+
+LA8C5:
+	CALL	L9822		; A8C5	CALL $9822	
+	CALL	LA1F8		; A8C8	CALL $A1F8	
+	CALL	L9C7B		; A8CB	CALL $9C7B	
+	CALL	L985A		; A8CE	CALL $985A	
+	CALL	L9A9B		; A8D1	CALL $9A9B	
+	RETURN			; A8D4	RET
 
 LA8D5:	.BYTE	0
 	.EVEN
