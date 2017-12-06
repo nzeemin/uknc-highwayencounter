@@ -866,7 +866,7 @@ L9468:	BIC	#177760, R0	; 9468	AND $0F
 	SOB	R1, 1$
 	MOVB	14(R4), R0	; 9485	LD A,(IX+$0C)	
 	BIC	#177770, R0	; 9488	AND $07	
-	MOVB	R0, 7(R4)	; 948A	LD (IX+$07),A	направление
+	MOVB	R0, 7(R4)	; 948A	LD (IX+$07),A	set direction
 	MOVB	10(R4), R0	; 948D	LD A,(IX+$08)	
 	CMP	R0, #5		; 9490	CP $05	
 	BHIS	L94A0		; 9492	JR NC,$94A0	
@@ -876,7 +876,7 @@ L9468:	BIC	#177760, R0	; 9468	AND $0F
 	BHIS	L94A0		; 949B	JR NC,$94A0	
 	TSTB	R0		; 949D	AND A	
 	BNE	L94A4		; 949E	JR NZ,$94A4	
-L94A0:	CLRB	10(R4)		; 94A0	LD (IX+$08),$00	 стоп
+L94A0:	CLRB	10(R4)		; 94A0	LD (IX+$08),$00	 stop
 L94A4:	MOVB	(R4), R0	; 94A4	LD A,(IX+$00)	
 	BIC	#177400, R0
 	CMPB	R0, #376	; 94A7	CP $FE	
@@ -1896,7 +1896,7 @@ L9C7B:
 	BIC	#177400, R0
 	BITB	R0, #128.	; 9C8A	BIT 7,A	
 	BEQ	L9C96		; 9C8C	JP Z,$9C96	
-	CLRB	7(R4)		; 9C8F	LD (IX+$07),$00	 направление
+	CLRB	7(R4)		; 9C8F	LD (IX+$07),$00	 direction
 	BR	L9CDB		; 9C93	JP $9CDB	
 L9C96:	MOVB	2(R4), R3	; 9C96	LD L,(IX+$01)	
 	BIC	#177400, R3
@@ -2028,7 +2028,7 @@ L9D73:	MOVB	(R3), R0	; 9D73	LD A,(HL)
 	JMP	L9E2B
 1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	
 L9D7B:				; 9D7B	LD DE,$0010	
-	ADD	#16., R3	; 9D7E	ADD HL,DE	
+	ADD	#16., R3	; 9D7E	ADD HL,DE	next record	
 	BR	L9D73		; 9D7F	JP $9D73	
 L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	
 	ADD	#7, R0		; 9D84	ADD A,$07	
@@ -2046,9 +2046,9 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl
 	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	добавляем горизонтальное смещение (только биты 2-3)
 	BIC	#177400, R5
 	ADD	R5, R0
-	CMP	R0, #13.	; 9D9C	CP $0D	
+	CMPB	R0, #13.	; 9D9C	CP $0D	
 	BLO	L9DAD		; 9D9E	JR C,$9DAD	
-	CMP	R0, #128.	; 9DA0	CP $80	
+	CMPB	R0, #128.	; 9DA0	CP $80	
 	BLO	L9DA9		; 9DA2	JR C,$9DA9	
 	ADD	#16., R0	; 9DA4	ADD A,$10	
 	BR	L9DAB		; 9DA6	JP $9DAB	
@@ -2262,7 +2262,7 @@ L9F06:
 	MOV	R2, R3		; 9F06	EX DE,HL	
 	DEC	R3		; 9F07	DEC L	
 	DEC	R3		; 9F08	DEC L	
-	MOV	#376, (R3)	; 9F09	LD (HL),$FE	
+	MOVB	#376, (R3)	; 9F09	LD (HL),$FE	
 	BISB	#200, 10(R4)	; 9F0B	SET 7,(IX+$08)	
 	MOVB	#200, 5(R4)	; 9F0F	LD (IX+$05),$80	
 				; 9F13	LD HL,$8F15	
@@ -2476,7 +2476,7 @@ LA14F:	CMPB	R0, #1		; A14F	CP $01
 	BNE	LA155		; A151	JR NZ,$A155	
 	MOVB	#377, (R3)	; A153	LD (HL),$FF	
 LA155:	INC	R3		; A155	INC HL	
-	DEC	R2		; A156	DEC E	
+	DEC	R2		; A156	DEC E		теперь DE указывает на direction
 	ASRB	(R3)		; A157	SRL (HL)	
 	BNE	LA170		; A159	JP NZ,$A170	
 	MOVB	#2, (R3)	; A15C	LD (HL),$02	
@@ -2488,10 +2488,10 @@ LA155:	INC	R3		; A155	INC HL
 	MOVB	R0, (R2)	; A166	LD (DE),A	
 LA167:	BITB	R1, #16.	; A167	BIT 4,B	
 	BEQ	LA170		; A169	JR Z,$A170	
-	MOVB	(R2), R0	; A16B	LD A,(DE)	
-	DEC	R0		; A16C	DEC A	
-	BIC	#177407, R0	; A16D	AND $07	
-	MOVB	R0, (R2)	; A16F	LD (DE),A	
+	MOVB	(R2), R0	; A16B	LD A,(DE)	get current direction
+	DEC	R0		; A16C	DEC A		rotate left
+	BIC	#177770, R0	; A16D	AND $07	        0..7
+	MOVB	R0, (R2)	; A16F	LD (DE),A	save new direction
 LA170:	MOV	R3, R2		; A170	EX DE,HL	
 	MOV	#L8A60, R3	; A171	LD HL,$8A60	таблица объектов, запись #6
 	INC	R2		; A174	INC DE	
@@ -2727,24 +2727,24 @@ LA2B8:
 				; A2C5	LD ($8A08),A	
 	CLR	R0		; A2C8	XOR A	
 	MOV	#14., R1	; A2C9	LD B,$0E	
-	CALL	LA34D		; A2CB	CALL $A34D	
+	CALL	LA34D		; A2CB	CALL $A34D	do the action
 LA2CE:	MOV	#8., R0		; A2CE	LD A,$08	
 	MOV	#1, R1		; A2D0	LD B,$01	
-	CALL	LA34D		; A2D2	CALL $A34D	
+	CALL	LA34D		; A2D2	CALL $A34D	do the action
 	TSTB	R0		; A2D5	AND A	
 	BNE	LA2CE		; A2D6	JR NZ,$A2CE	
 ;
 LA2D8:	MOV	#12., R0	; A2D8	LD A,$0C
 	MOV	#1, R1		; A2DA	LD B,$01	
-	CALL	LA34D		; A2DC	CALL $A34D	
+	CALL	LA34D		; A2DC	CALL $A34D	do the action
 	CMP	R0, #3		; A2DF	CP $03	
 	BNE	LA2D8		; A2E1	JR NZ,$A2D8	
 ; Extra Vortons appear
 	MOV	#<L8A10+10>, R3	; A2E3	LD HL,$8A18	extra Vorton movement
 				; A2E6	LD DE,$0010	
 	MOV	#4, R1		; A2E9	LD B,$04	counter = 4 extra Vortons
-LA2EB:	MOVB	#1, (R3)	; A2EB	LD (HL),$01	movement
-	ADD	#16., R3	; A2ED	ADD HL,DE	to the next record
+LA2EB:	MOVB	#1, (R3)	; A2EB	LD (HL),$01	<  movement
+	ADD	#16., R3	; A2ED	ADD HL,DE	|  to the next record
 	SOB	R1, LA2EB	; A2EE	DJNZ $A2EB	repeat
 	CLR	R0		; A2F0	XOR A	
 	MOV	#39., R1	; A2F1	LD B,$27	loop counter
@@ -2767,10 +2767,10 @@ LA2EB:	MOVB	#1, (R3)	; A2EB	LD (HL),$01	movement
 	MOV	#15., R2	; A310	LD DE,$000F	
 	MOV	#4, R1		; A313	LD B,$04	counter = 4 extra Vortons
 	CLR	R0		; A315	XOR A	
-LA316:	MOVB	R0, (R3)+	; A316	LD (HL),A	direction
-				; A317	INC HL	
-	MOVB	R0, (R3)	; A318	LD (HL),A	movement
-	ADD	R2, R3		; A319	ADD HL,DE	to the next record
+LA316:	MOVB	R0, (R3)+	; A316	LD (HL),A	< direction
+				; A317	INC HL	        |
+	MOVB	R0, (R3)	; A318	LD (HL),A	|  movement
+	ADD	R2, R3		; A319	ADD HL,DE	|  to the next record
 	SOB	R1, LA316	; A31A	DJNZ $A316	repeat
 LA31C:	MOV	#20., R0	; A31C	LD A,$14	
 	MOV	#1, R1		; A31E	LD B,$01	loop counter
@@ -2778,23 +2778,23 @@ LA31C:	MOV	#20., R0	; A31C	LD A,$14
 	CMPB	R0, #1		; A323	CP $01
 	BNE	LA31C		; A325	JR NZ,$A31C	
 ;
-;	MOVB	#1, <L8A00+10>	; A327	LD A,$01	Main Vorton movement
+	MOVB	#1, <L8A00+10>	; A327	LD A,$01	Main Vorton movement
 				; A329	LD ($8A08),A	
-;	CLR	R0		; A32C	XOR A	
-;	MOV	#32., R1	; A32D	LD B,$20	
-;	CALL	LA34D		; A32F	CALL $A34D	do the action
-;LA332:	MOV	#20., R0	; A332	LD A,$14	
-;	MOV	#1, R1		; A334	LD B,$01	
-;	CALL	LA34D		; A336	CALL $A34D	do the action
-;	TSTB	R0		; A339	AND A	
-;	BNE	LA332		; A33A	JR NZ,$A332	
-		; A33C	LD HL,$8A18	
-		; A33F	LD DE,$0010	
-		; A342	LD B,$04	
-		; A344	LD (HL),$01	
-		; A346	ADD HL,DE	
-		; A347	DJNZ $A344	
-		; A349	CALL $92F5	
+	CLR	R0		; A32C	XOR A	
+	MOV	#32., R1	; A32D	LD B,$20	
+	CALL	LA34D		; A32F	CALL $A34D	do the action
+LA332:	MOV	#20., R0	; A332	LD A,$14	
+	MOV	#1, R1		; A334	LD B,$01	
+	CALL	LA34D		; A336	CALL $A34D	do the action
+	TSTB	R0		; A339	AND A	
+	BNE	LA332		; A33A	JR NZ,$A332	
+	MOV	#<L8A10+8.>, R3	; A33C	LD HL,$8A18	Extra Vorton movement
+				; A33F	LD DE,$0010	
+	MOV	#4, R1		; A342	LD B,$04	counter = 4 extra Vortons
+LA344:	MOVB	#1, (R3)	; A344	LD (HL),$01	<  start moving
+	ADD	#16., R3	; A346	ADD HL,DE	|  to the next record
+	SOB	R1, LA344	; A347	DJNZ $A344	repeat
+	CALL	L92F5		; A349	CALL $92F5	
 	RETURN			; A34C	RET	
 
 ; Routine: Perform some action
@@ -2809,13 +2809,13 @@ LA350:	PUSH	R1		; A350	PUSH BC
 	CALL	L9A9B		; A35D	CALL $9A9B	Отрисовка теневого экрана
 	POP	R1		; A360	POP BC	
 	SOB	R1, LA350	; A361	DJNZ $A350	
-	MOVB	<L8A00+7>, R0	; A363	LD A,($8A07)	
+	MOVB	<L8A00+7>, R0	; A363	LD A,($8A07)	Main Vorton direction 0..7
 	BIC	#177400, R0
 	RETURN			; A366	RET
 
 ; Routine: DEMO MODE
 LA367:
-	CALL	LA291		; A367	CALL $A291	Show the animation
+	CALL	LA291		; A367	CALL $A291	Show the starting animation
 	BR	LA372		; A36A	JR $A372	
 LA36C:	CALL	L92CE		; A36C	CALL $92CE	
 	CALL	L95EF		; A36F	CALL $95EF	Show the screen
@@ -2839,19 +2839,23 @@ LA37A:	PUSH	R1		; A37A	PUSH BC
 	MOV	L8F01, R3	; A394	LD HL,($8F01)	
 	MOVB	#376, (R3)+	; A397	LD (HL),$FE	
 				; A399	INC L	
-		; A39A	LD E,(HL)	
-		; A39B	INC L	
-		; A39C	LD D,(HL)	
-		; A39D	EX DE,HL	
-		; A39E	LD BC,$00B0	
-		; A3A1	ADD HL,BC	
-		; A3A2	EX DE,HL	
-		; A3A3	LD (HL),D	
-		; A3A4	DEC L	
-		; A3A5	LD (HL),E	
+	MOVB	(R3)+, R2	; A39A	LD E,(HL)	
+	BIC	#177400, R2	; A39B	INC L	
+	SWAB	R2
+	BISB	(R3), R2	; A39C	LD D,(HL)	
+	SWAB	R2
+				; A39D	EX DE,HL	
+				; A39E	LD BC,$00B0	
+	ADD	#260, R2	; A3A1	ADD HL,BC	
+				; A3A2	EX DE,HL	
+	SWAB	R2
+	MOVB	R2, (R3)	; A3A3	LD (HL),D	
+	DEC	R3		; A3A4	DEC L	
+	SWAB	R2
+	MOVB	R2, (R3)	; A3A5	LD (HL),E	
 	BR	LA36C		; A3A6	JR $A36C	
 LA3A8:
-		; A3A8	LD HL,$5800	
+		; A3A8	LD HL,$5800	attributes
 		; A3AB	LD C,$12	
 		; A3AD	LD B,$20	
 		; A3AF	LD (HL),$52	
