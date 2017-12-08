@@ -102,8 +102,8 @@ LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.=075000
 
 L7A00:	; Адреса спрайтов
-	.WORD	LD480, LD510, LD5A0, LD630, LD6C0, LD750, LD7E0, LD870
-	.WORD	LD240, LD2D0, LD360, LD3F0, LD120, LD1B0, LD120, LD1B0
+	.WORD	LD480, LD510, LD5A0, LD630, LD6C0, LD750, LD7E0, LD870	; Vorton
+	.WORD	LD240, LD2D0, LD360, LD3F0, LD120, LD1B0, LD120, LD1B0	; Lasertron
 	.WORD	LD000, LD090, LD000, LD090, LC700, LC790, LC820, LC8B0
 	.WORD	LC940, LC9D0, LCA60, LCAF0, LCB80, LCC10, LCCA0, LCD30
 	.WORD	LCDC0, LCE50, LCEE0, LCF70, LC280, LC310, LC3A0, LC430
@@ -513,7 +513,7 @@ L8F17:	.BYTE	206
 L8F18:	.BYTE	226	; Low part of attribute address $5Axx
 L8F19:	.BYTE	326
 L8F0B:	.WORD	0	; Адрес в таблице 8D52; NOTE: Перенесено сюда для правильного выравнивания других полей
-L8F1A:	.WORD	6654
+L8F1A:	.WORD	6654	; Mission Time
 L8F1C:	.BYTE	1	; Zone number? $01..$1F
 L8F1D:	.BLKB	5.
 L8F22:	.BYTE	0
@@ -602,15 +602,146 @@ L90FA:	CLRB	(R3)		; 90FA	LD (HL),$00
 	CALL	LA42B		; 9101	CALL $A42B	Show score
 	CALL	L8F8A		; 9104	CALL $8F8A	
 L9107:	CALL	LA291		; 9107	CALL $A291	Show the animation
-		; 910A	LD A,$FD	
+L910A:		; 910A	LD A,$FD	
 		; 910C	IN A,($FE)	
-		; 910E	AND $11	
-		; 9110	JP NZ,$911F	
-		; 9113	LD HL,$9232	
-		; 9116	LD A,$01	
-;	MOVB	#1, L8F23	; 9118	LD ($8F23),A	
-;	CALL	LB890	; 911B	CALL $B890	
+		; 910E	AND $11				Check for abort key
+	BR	L911F	; 9110	JP NZ,$911F	
+	MOV	#L9232, R3	; 9113	LD HL,$9232	"MISSION ABORTED"
+				; 9116	LD A,$01	
+	MOVB	#1, L8F23	; 9118	LD ($8F23),A	
+L911B:	CALL	LB890		; 911B	CALL $B890	Print text
 	RETURN			; 911E	RET	
+L911F:		; 911F	LD A,$BF
+		; 9121	IN A,($FE)	
+		; 9123	BIT 4,A				Check for pause key
+	BR	L9163	; 9125	JR NZ,$9163	
+	MOV	#L92A0, R3	; 9127	LD HL,$92A0	"PAUSE MODE"
+	CALL	LB890		; 912A	CALL $B890	Print text
+		; 912D	LD HL,$FE0A	
+		; 9130	LD B,$30	
+		; 9132	LD (HL),$02
+
+L9163:	CALL	L9822		; 9163	CALL $9822	
+	CALL	LA03B		; 9166	CALL $A03B	
+	CALL	L9C7B		; 9169	CALL $9C7B	
+	CALL	L985A		; 916C	CALL $985A	
+	CALL	L9A9B		; 916F	CALL $9A9B
+	MOVB	L8F00, R0	; 9172	LD A,($8F00)	Zone number?
+	CMPB	R0, #30.	; 9175	CP $1E	
+	BLO	L918C		; 9177	JP C,$918C	
+		; 917A	LD HL,$8A51	
+		; 917D	LD E,(HL)	
+		; 917E	INC L	
+		; 917F	LD D,(HL)	
+		; 9180	LD HL,$156C	
+		; 9183	EX DE,HL	
+		; 9184	AND A	
+		; 9185	SBC HL,DE	
+		; 9187	LD A,H	
+		; 9188	AND A	
+		; 9189	JP Z,$A617	
+L918C:	MOV	L8F1A, R3	; 918C	LD HL,($8F1A)	get Mission Time
+	DEC	R3		; 918F	DEC HL		time's ticking
+				; 9190	LD A,L	
+				; 9191	OR H	
+				; 9192	AND A	        time's out?
+	BNE	L91C3		; 9193	JR NZ,$91C3	no => jump
+; Time is out
+		; 9195	LD A,($8F19)	
+		; 9198	LD L,A	
+		; 9199	LD H,$50	Attributes?
+		; 919B	LD A,$77	
+		; 919D	CP (HL)	
+		; 919E	JR Z,$91B8	
+		; 91A0	LD A,L	
+		; 91A1	DEC A	
+		; 91A2	LD ($8F19),A	
+		; 91A5	XOR A	
+		; 91A6	LD B,$07	
+		; 91A8	LD (HL),A	
+		; 91A9	INC H	
+		; 91AA	DJNZ $91A8	
+		; 91AC	LD A,L	
+		; 91AD	CP $D4	
+		; 91AF	JP NC,$91C0	
+	MOV	#L9247, R3	; 91B2	LD HL,$9247	"TOO LATE"
+	JMP	L911B		; 91B5	JP $911B	Print text and Return	
+L91B8:		; 91B8	LD A,$70
+		; 91BA	LD B,$07	
+L91BC:		; 91BC	LD (HL),A	
+		; 91BD	INC H	
+		; 91BE	DJNZ $91BC	
+L91C0:	MOV	#6654, R3	; 91C0	LD HL,$0DAC	
+L91C3:	MOV	R3, L8F1A	; 91C3	LD ($8F1A),HL	save Mission Time
+L91C6:		; 91C6	LD A,R	
+		; 91C8	SLL A	
+	MOV	L8F01, R3	; 91CA	LD HL,($8F01)	
+	MOVB	L8F17, R1	; 91CD	LD A,($8F17)	
+	BIC	#177400, R1	; 91D0	LD C,A	
+		; 91D1	JR NC,$91C6	delay
+	MOVB	(R3), R0	; 91D3	LD A,(HL)	
+	CMPB	R0, #376	; 91D4	CP $FE	
+	BLO	L910A		; 91D6	JP C,$910A	
+	MOV	#16., R2	; 91D9	LD DE,$0010	
+	ADD	R2, R3		; 91DC	ADD HL,DE	
+	INC	R1		; 91DD	INC C	
+	INC	R1		; 91DE	INC C	
+	MOV	R0, R3		; 91DF	LD A,L	
+		; 91E0	CP $50	
+		; 91E2	JP C,$91EB	
+		; 91E5	LD HL,$926F	
+		; 91E8	JP $911B	
+		; 91EB	LD A,(HL)	
+		; 91EC	CP $FE	
+		; 91EE	JP NC,$91D9	
+		; 91F1	LD ($8F01),HL	
+		; 91F4	LD DE,$0008	
+		; 91F7	ADD HL,DE	
+		; 91F8	BIT 7,(HL)	
+		; 91FA	JP NZ,$91DC	
+		; 91FD	LD A,C	
+		; 91FE	LD ($8F17),A	
+		; 9201	PUSH HL	
+		; 9202	LD DE,$92C6	
+		; 9205	LD H,$53	
+		; 9207	LD L,C	
+		; 9208	LD B,$04	
+		; 920A	LD A,(DE)	
+		; 920B	LD (HL),A	
+		; 920C	INC DE	
+		; 920D	INC H	
+		; 920E	DJNZ $920A	
+		; 9210	LD H,$53	
+		; 9212	INC L	
+		; 9213	LD B,$04	
+		; 9215	LD A,(DE)	
+		; 9216	LD (HL),A	
+		; 9217	INC DE	
+		; 9218	INC H	
+		; 9219	DJNZ $9215	
+		; 921B	POP HL	
+		; 921C	DEC L	
+		; 921D	DEC L	
+		; 921E	RES 4,(HL)	
+		; 9220	DEC L	
+		; 9221	LD (HL),$00	
+		; 9223	LD DE,$0005	
+		; 9226	ADD HL,DE	
+		; 9227	LD (HL),$0E	
+		; 9229	CALL $92CE	
+		; 922C	CALL $95EF	
+	JMP	L910A		; 922F	JP $910A
+
+L9232:	.WORD	106705
+	.BYTE	131,212,135,131,143,143,131,137,136,115,121,122,137,142,144,125,124,212,376,000  ; "MISSION ABORTED"
+	.EVEN
+L9247:	.WORD	106705
+	.BYTE	130,212,115,144,137,137,115,134,121,144,125,115,212,377  ; "TOO LATE"
+	.WORD	110305
+	.BYTE	131,212,135,131,143,143,131,137,136,115,144,125,142,135,131,136,121,144,125,124,212,376
+L92A0:	.WORD	106705
+	.BYTE	131,312,140,121,145,143,125,115,135,137,124,125,312,376  ; "PAUSE MODE"
+	.EVEN
 
 ; Routine
 L92CE:	MOV	#L8D52, R3	; 92CE	LD HL,$8D52	адрес начала таблицы объектов
@@ -1420,18 +1551,18 @@ L98E2:
 	MOVB	5(R4), R5	; 98F2	ADD A,(IX+$05)	добавляем фазу спрайта
 	BIC	#177400, R5
 	ADD	R5, R0
-	MOV	#L7A00, R3	; 98F5	LD L,A		таблица адресов спрайтов
-	ADD	R0, R3		; 98F6	LD H,$7A	
+	MOV	#L7A00, R3	; 98F5	LD L,A		
+	ADD	R0, R3		; 98F6	LD H,$7A	sprite address table 7A00
 	MOV	(R3), R2	; 98F8	LD E,(HL)	
 				; 98F9	INC HL	
-				; 98FA	LD D,(HL)	DE = адрес спрайта
-	MOVB	11(R4), R0	; 98FB	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)	
-	BIC	#177763, R0
-	ADD	R0, R0		; 98FE	ADD A,A	
-	MOV	R0, R1		; 98FF	LD C,A	
+				; 98FA	LD D,(HL)	DE = sprite address
+	MOVB	11(R4), R1	; 98FB	LD A,(IX+$09)	get horz shift (bits 2-3 only)	
+	BIC	#177763, R1
+	ASR	R1		; 98FE	ADD A,A	        bits 3-4
+				; 98FF	LD C,A	
 				; 9900	LD B,$00	
-	MOV	#L9915, R3	; 9902	LD HL,$9915	jump base address	
-	ADD	R1, R3		; 9905	ADD HL,BC	
+	ADD	#L9915, R1	; 9902	LD HL,$9915	jump base address	
+	MOV	(R1), R3	; 9905	ADD HL,BC	
 	MOVB	4(R4), R1	; 9906	LD C,(IX+$03)	
 	BIC	#177400, R1
 	SWAB	R1
@@ -1440,27 +1571,14 @@ L98E2:
 	MOV	L8F03, R3	; 990D	LD HL,($8F03)	
 	ADD	R1, R3		; 9910	ADD HL,BC	
 	MOV	R3, R1		; 9911	LD C,L	
-				; 9912	LD B,H		BC = адрес куда рисовать спрайт
+				; 9912	LD B,H		BC = address where to draw the sprite
 	PUSH	R3		; 9913	EX (SP),HL	restore HL and set value on stack
 	MOV	R5, R3
-	JMP	(R3)		; 9914	JP (HL)	
-L9915:	CALL	L99D1		; 9915	CALL $99D1	Draw sprite with shift by 4px
-	BR	L9980		; 9918	JP $9980	
-	NOP			; 991B	NOP	
-				; 991C	NOP	
-	CALL	L9A26		; 991D	CALL $9A26	Draw sprite with shift by 2px
-	BR	L9980		; 9920	JP $9980	
-	NOP			; 9923	NOP	
-				; 9924	NOP	
-	CALL	L9A70		; 9925	CALL $9A70	Draw sprite with no shift
-	BR	L9980		; 9928	JP $9980	
-	NOP			; 992B	NOP	
-				; 992C	NOP	
-	CALL	L9933		; 992D	CALL $9933	Draw sprite with shift by -2px
-;	BR	L9980		; 9930	JP $9980
-
+	CALL	(R3)		; 9914	JP (HL)		Draw the sprite
+;
+;NOTE: Блок кода 9915-9932 заменён на таблицу L9915
 ;NOTE: Процедура 9933 перенесена ниже, ближе к остальным процедурам отрисовки спрайтов
-
+;
 ; Сюда приходим из процедуры 985A после отрисовки спрайта
 L9980:	POP	R3		; 9980	POP HL		какой был адрес "куда рисовать"
 				; 9981	LD A,H	
@@ -1520,6 +1638,11 @@ L99C7:	ADD	R1, R3		; 99C7	ADD HL,BC	к следующей строке
 				; 99CC	DEC A	
 	SOB	R5, L99BC	; 99CD	JP NZ,$99BC	продолжение цикла по строкам
 	RETURN 			; 99D0	RET		
+; Таблица из 4-х элементов для выбора процедуры отрисовки спрайта	
+L9915:	.WORD	L99D1	; Draw sprite with shift by 4px
+	.WORD	L9A26	; Draw sprite with shift by 2px
+	.WORD	L9A70	; Draw sprite with no shift
+	.WORD	L9933	; Draw sprite with shift by -2px
 
 ; Routine: Draw sprite with shift by -2px
 ; BC = адрес куда рисовать
@@ -1818,10 +1941,10 @@ L9ACA:						;	|
 	SUB	R0, R1		; 9AE1	LD A,$6A	
 	MOV	R1, R0		; 9AE3	SUB B	
 	ADD	R0, R0		; 9AE4	ADD A,A	
-L9AE5:	MOV	#2., R1		; 9AE5	LD B,$C8	
-L9AE7:	SOB	R1, L9AE7	; 9AE7	DJNZ $9AE7	задержка
+L9AE5:	NOP			; 9AE5	LD B,$C8	
+;L9AE7:	SOB	R1, L9AE7	; 9AE7	DJNZ $9AE7	
 				; 9AE9	DEC A	
-	SOB	R0, L9AE5	; 9AEA	JR NZ,$9AE5	
+	SOB	R0, L9AE5	; 9AEA	JR NZ,$9AE5	delay
 	BR	L9B72		; 9AEC	JP $9B72	
 ;
 L9AEF:	MOVB	L8F15, R0	; 9AEF	LD A,($8F15)	
@@ -1933,7 +2056,7 @@ L9CCD:	MOVB	10(R4), R0	; 9CCD	LD A,(IX+$08)
 	JMP	L9E1A
 1$:	BITB	#200, R0	; 9CD6	BIT 7,A	
 	BEQ	L9D29		; 9CD8	JP Z,$9D29	
-L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	
+L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	фаза спрайта?
 	BIC	#177400, R0
 	ADD	#8., R0		; 9CDE	ADD A,$08	
 	CMP	R0, #220.	; 9CE0	CP $DC
@@ -2424,6 +2547,10 @@ LA02C:
 	JMP	L9E1A		; A036	JP $9E1A
 ;
 LA039:	.WORD	0
+
+; Routine (Game mode)
+LA03B:
+	RETURN ;STUB
 
 ; Routine
 ; Used by the routine at A11B.
@@ -3045,13 +3172,13 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	BIT	#177400, R3	; A56F	LD A,H	
 				; A570	AND A	
 	BNE	LA5DA		; A571	JP NZ,$A5DA	
-	MOVB	11(R4), R0	; A574	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)
-	BIC	#177763, R0
-	ADD	R0, R0		; A577	ADD A,A	
-	MOV	R0, R1		; A578	LD C,A	
+	MOVB	11(R4), R1	; A574	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)
+	BIC	#177763, R1
+	ASR	R1		; A577	ADD A,A	
+	ADD	#L9915, R1	; A578	LD C,A	
 				; A579	LD B,$00	
-	MOV	#LA592, R3	; A57B	LD HL,$A592	
-	ADD	R1, R3		; A57E	ADD HL,BC	
+				; A57B	LD HL,$A592	
+	MOV	(R1), R3	; A57E	ADD HL,BC	
 	MOVB	4(R4), R1	; A57F	LD C,(IX+$03)	
 	BIC	#177400, R1
 	SWAB	R1
@@ -3064,20 +3191,10 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	PUSH	R2		; A58C	PUSH HL	
 				; A58D	EX DE,HL	
 	MOV	#LBBC0, R2	; A58E	LD DE,$BBC0	Sprite #5 -- площадка-препятствие
-	JMP	(R3)		; A591	JP (HL)	
-LA592:	CALL	L99D1		; A592	CALL $99D1	Draw sprite with shift by 4px
-	BR	LA5AD		; A595	JP $A5AD	
-	NOP			; A598	NOP	
-				; A599	NOP	
-	CALL	L9A26		; A59A	CALL $9A26	Draw sprite with shift by 2px
-	BR	LA5AD		; A59D	JP $A5AD	
-	NOP			; A5A0	NOP	
-				; A5A1	NOP	
-	CALL	L9A70		; A5A2	CALL $9A70	Draw sprite with no shift
-	BR	LA5AD		; A5A5	JP $A5AD	
-	NOP			; A5A8	NOP	
-				; A5A9	NOP	
-	CALL	L9933		; A5AA	CALL $9933	Draw sprite with shift by -2px
+	CALL	(R3)		; A591	JP (HL)	
+;
+;NOTE: Блок кода A592-A5AС заменён на таблицу L9915
+;
 LA5AD:	POP	R3		; A5AD	POP HL	
 				; A5AE	LD A,H	
 	CMP	R3, #LE900	; A5AF	CP $E9	
@@ -3200,6 +3317,7 @@ LB13C:
 3$:	CMP	R0, #067		; '7' ?
 	BNE	4$
 	CALL	L90F2		; B18C	CALL $90F2	
+	CALL	WTKEY ;STUB
 	;TODO
         BR	LB0E7 		; B1AA	JP $B0E7
 4$:	CMP	R0, #060		; '0' ?
@@ -3477,26 +3595,17 @@ LB433:	PUSH	R2		; B433	PUSH DE		save loop counter
 	BITB	#1, (R3)	; B434	BIT 0,(HL)	
 	BEQ	LB463		; B436	JR Z,$B463	
 	MOVB	R0, R3		; B438	LD E,A	
-				; B439	LD D,$00	
+	ASR	R3		; B439	LD D,$00	
+	ASR	R3
 	ADD	#LB446, R3	; B43B	LD HL,$B446	
-				; B43E	ADD HL,DE	
+	MOV	(R3), R3	; B43E	ADD HL,DE	
 	PUSH	R0		; B43F	PUSH AF	
 	PUSH	R1		; B440	PUSH BC	
 	MOV	LB4CD, R2	; B441	LD DE,($B4CD)	Get mask and sprite address
-	JMP	(R3)		; B445	JP (HL)	
-LB446:	CALL	L9933		; B446	CALL $8F85	0. -- JP 9933 Draw sprite with shift by -2px
-	BR	LB461		; B449	JP $B461	
-	NOP			; B44C	NOP	
-				; B44D	NOP	
-	CALL	L9A70		; B44E	CALL $8F82	8. -- JP 9A70 Draw sprite with no shift
-	BR	LB461		; B451	JP $B461	
-	NOP			; B454	NOP	
-				; B455	NOP	
-	CALL	L9A26		; B456	CALL $8F7F	16. -- JP 9A26 Draw sprite with shift by 2px
-	BR	LB461		; B459	JP $B461	
-	NOP			; B45C	NOP	
-				; B45D	NOP	
-	CALL	L99D1		; B45E	CALL $8F7C	24. -- JP 99D1 Draw sprite with shift by 4px
+	CALL	(R3)		; B445	JP (HL)		Draw the sprite
+;
+;NOTE: Блок кода B446-B460 заменён на таблицу LB446
+;
 LB461:	POP	R1		; B461	POP BC	
 	POP	R0		; B462	POP AF	
 LB463:	MOV	#96., R3	; B463	LD HL,$0060	
@@ -3531,6 +3640,11 @@ LB472:	MOV	LB4CB, R3	; B472	LD HL,($B4CB)	restore HL
 	POP	R1		; B496	POP BC	
 	POP	R3		; B497	POP HL	
 	RETURN			; B498	RET	
+; Таблица из 4-х элементов для выбора процедуры отрисовки спрайта
+LB446:	.WORD	L9933	; 0. -- JP 9933 Draw sprite with shift by -2px
+	.WORD	L9A70	; 8. -- JP 9A70 Draw sprite with no shift
+	.WORD	L9A26	; 16. -- JP 9A26 Draw sprite with shift by 2px
+	.WORD	L99D1	; 24. -- JP 99D1 Draw sprite with shift by 4px
 
 ; Title screen sign "HIGHWAY ENCOUNTER", used by B33C routine
 LB499:	.BYTE	000,127,165,127,120, 000,122,105,125,120
