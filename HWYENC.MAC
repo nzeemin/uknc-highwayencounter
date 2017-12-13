@@ -365,7 +365,7 @@ L8800:	.BYTE	376,000,000,000,000,000,002,000,002,000,022,000,004,110,270,022
 ;   IX+$05 -- ?? значения 000, 020, 030, 120, 160, 170, 340
 ;   IX+$06 -- ?? характер движения
 ;   IX+$07 -- направление, копируется из (IX+$0С) AND $07, значения 0..7
-;   IX+$08 -- ?? 0 = стоп, 1 = движение
+;   IX+$08 -- movement flags ?? 0 = стоп, 1 = движение
 ;   IX+$09 -- горизонтальное смещение (только биты 2-3)
 ;   IX+$0A -- смещение от $8F00, где лежит номер спрайта
 ;   IX+$0B -- номер процедуры из таблицы $9000
@@ -375,7 +375,7 @@ L8A10:	.BYTE	044,230,003,161,301,160,020,000,001,010,015,000,000,030,130,000  ; 
 L8A20:	.BYTE	044,240,003,362,300,160,020,000,001,010,015,000,000,060,144,000  ; 2
 L8A30:	.BYTE	044,250,003,163,300,160,020,000,001,010,015,000,000,030,160,000  ; 3
 L8A40:	.BYTE	044,260,003,364,277,160,020,000,001,010,015,000,000,060,174,000  ; 4
-L8A50:	.BYTE	044,270,003,165,277,020,011,000,000,010,015,306,000,044,300,000
+L8A50:	.BYTE	044,270,003,165,277,020,011,000,000,010,015,306,000,044,300,000  ; Lasertron
 L8A60:	.BYTE	376,171,002,115,323,030,001,000,004,014,021,026,000,376,260,000
 	.BYTE	376,316,003,134,300,030,001,000,004,014,022,026,000,376,260,000
 	.BYTE	376,322,003,035,300,030,001,000,004,004,021,026,000,376,260,000
@@ -629,17 +629,22 @@ L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
 	MOVB	L8F00, R0	; 9172	LD A,($8F00)	Zone number?
 	CMPB	R0, #30.	; 9175	CP $1E	
 	BLO	L918C		; 9177	JP C,$918C	
-	MOV	#<L8A50+1>, R3	; 917A	LD HL,$8A51	
-		; 917D	LD E,(HL)	
-		; 917E	INC L	
-		; 917F	LD D,(HL)	
-		; 9180	LD HL,$156C	
-		; 9183	EX DE,HL	
-		; 9184	AND A	
-		; 9185	SBC HL,DE	
-		; 9187	LD A,H	
-		; 9188	AND A	
-		; 9189	JP Z,$A617	
+; Zone >= 30.
+	MOV	#<L8A50+1>, R3	; 917A	LD HL,$8A51	Lasertron object + 1
+	MOVB	(R3)+, R2	; 917D	LD E,(HL)	
+	BIC	#177400, R2	; 917E	INC L	
+	SWAB	R2
+	BISB	(R3), R2	; 917F	LD D,(HL)	
+	SWAB	R2
+				; 9180	LD HL,$156C	
+	MOV	R2, R3		; 9183	EX DE,HL	
+				; 9184	AND A	
+	SUB	#5484., R3	; 9185	SBC HL,DE	
+	MOV	R3, R0		; 9187	LD A,H	
+	SWAB	R0
+	BIC	#177400, R0	; 9188	AND A	
+	BNE	L918C		; 9189	JP Z,$A617	
+	JMP	LA617
 L918C:	MOV	L8F1A, R3	; 918C	LD HL,($8F1A)	get Mission Time
 	DEC	R3		; 918F	DEC HL		time's ticking
 				; 9190	LD A,L	
@@ -3356,6 +3361,53 @@ LA5FE:		; A5FE	PUSH BC
 		; A613	DEC C	
 		; A614	DJNZ $A5FC	
 LA616:	RETURN			; A616	RET	
+;
+; Animation in Zone 30.
+LA617:
+	MOV	#5, R1		; A617	LD B,$05	loop counter = 5
+	MOV	#L8A00, R4	; A619	LD IX,$8A00	object table beginning
+LA61D:	MOVB	(R4), R0	; A61D	LD A,(IX+$00)	<
+	CMPB	R0, #376	; A620	CP $FE		|  skip?
+	BHIS	LA638		; A622	JR NC,$A638	|  yes => jump
+	BISB	#128., 10(R4)	; A624	SET 7,(IX+$08)	|
+	MOVB	#128., 5(R4)	; A628	LD (IX+$05),$80	|
+	MOV	#L8F15, R3	; A62C	LD HL,$8F15	|
+	BISB	#64., (R3)	; A62F	SET 6,(HL)	|
+	PUSH	R1		; A631	PUSH BC		|
+	ADD	#25600., R1	; A632	LD B,$64	|
+	CALL	LA414		; A634	CALL $A414	|  Increase score
+	POP	R1		; A637	POP BC		|
+LA638:				; A638	LD DE,$0010	|
+	ADD	#16., R4	; A63B	ADD IX,DE	|  next record
+	SOB	R1, LA61D	; A63D	DJNZ $A61D	repeat
+	CLRB	10(R4)		; A63F	LD (IX+$08),$00	
+	MOV	#24., R1	; A643	LD B,$18	loop counter = 24.
+	CLR	R0		; A645	XOR A		action = none
+	CALL	LA34D		; A646	CALL $A34D	do the action
+	MOV	#L8A50, R3	; A649	LD HL,$8A50	Lasertron
+	MOV	R3, L8F01	; A64C	LD ($8F01),HL	
+	MOV	#15., R1	; A64F	LD B,$0F	loop counter = 15.
+	CLR	R0		; A651	XOR A		action = none
+	CALL	LA34D		; A652	CALL $A34D	do the action
+		; A655	LD HL,$5367	Attributes?
+		; A658	LD C,$09	
+LA65A:		; A65A	LD B,$05	
+LA65C:		; A65C	LD (HL),$00	
+		; A65E	INC H	
+		; A65F	DJNZ $A65C	
+		; A661	LD H,$53	
+		; A663	INC L	
+		; A664	DEC C	
+		; A665	JR NZ,$A65A	
+		; A667	LD DE,$A875	
+		; A66A	LD L,$88	
+		; A66C	CALL $A677	
+		; A66F	LD L,$A8	
+		; A671	CALL $A677	
+	JMP	LA694		; A674	JP $A694	
+
+LA694:
+	RETURN ;STUB
 
 ; Routine: Show one screen in DEMO mode
 LA8C5:
