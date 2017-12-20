@@ -46,6 +46,30 @@ EXITSC:	; Строка очистки экрана перед выходом
 	.BYTE	0
 	.EVEN
 
+;------------------------------------------------------------------------------
+
+	.=1200
+
+SPRITE::
+.INCLUDE /SPRITE.MAC/
+
+;------------------------------------------------------------------------------
+
+	.=51400
+
+LD900:	.BLKB	704.
+; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
+LDBC0:	.BLKB	832.
+LDF00:	.BLKB	2560.
+LE900:	.BLKB	512.			; Условное начало второго теневого экрана
+LEB00:	.BLKB	4608.
+LFD00:	.BLKB	553.			; Область маркеров отрисовки
+LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
+	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
+	.EVEN
+
+;------------------------------------------------------------------------------
+
 ; Подпрограмма: Печать строки: R1 = адрес строки, строка завершается 0; портит R0
 PRINT:
 10$:	MOVB	(R1)+, R0	; Конец строки?
@@ -75,27 +99,17 @@ WTKEY:	TSTB	@#177560
 	BIS	#15400,R0	; #33 в верхний байт
 2$:	RETURN
 
-;------------------------------------------------------------------------------
-
-	.=1200
-
-SPRITE::
-.INCLUDE /SPRITE.MAC/
-
-;------------------------------------------------------------------------------
-
-	.=51400
-
-LD900:	.BLKB	704.
-; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
-LDBC0:	.BLKB	832.
-LDF00:	.BLKB	2560.
-LE900:	.BLKB	512.			; Условное начало второго теневого экрана
-LEB00:	.BLKB	4608.
-LFD00:	.BLKB	553.			; Область маркеров отрисовки
-LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
-	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
-	.EVEN
+; Подпрограмма: Получение символа с клавиатуры: флаг Z=0 = есть символ, R0 = полученный символ
+GETKEY:	TSTB	@#177560	; есть символ?
+	BPL	4$		; нет символа => выходим
+	CMPB	R0, #33		; Esc ?
+	BNE	2$		
+1$:	TSTB	@#177560
+	BPL	1$
+	BIS	#15400,R0	; #33 в верхний байт
+2$:	RETURN
+4$:	CLR	R0		; возвращаем пустой код клавиши
+	RETURN
 
 ;------------------------------------------------------------------------------
 
@@ -686,32 +700,32 @@ L91C6:		; 91C6	LD A,R
 		; 91D1	JR NC,$91C6	delay
 	MOVB	(R3), R0	; 91D3	LD A,(HL)	
 	CMPB	R0, #376	; 91D4	CP $FE	
-	BLO	L910A		; 91D6	JP C,$910A	
-	MOV	#16., R2	; 91D9	LD DE,$0010	
-	ADD	R2, R3		; 91DC	ADD HL,DE	
+	BLO	L910A		; 91D6	JP C,$910A	continue main loop
+L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010	
+L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	
 	INC	R1		; 91DD	INC C	
 	INC	R1		; 91DE	INC C	
-	MOV	R0, R3		; 91DF	LD A,L	
-		; 91E0	CP $50	
-		; 91E2	JP C,$91EB	
-		; 91E5	LD HL,$926F	
-		; 91E8	JP $911B	
-		; 91EB	LD A,(HL)	
-		; 91EC	CP $FE	
-		; 91EE	JP NC,$91D9	
-		; 91F1	LD ($8F01),HL	берём адрес таблицы объектов
-		; 91F4	LD DE,$0008	movement flags
-		; 91F7	ADD HL,DE	
-		; 91F8	BIT 7,(HL)	
-		; 91FA	JP NZ,$91DC	
-		; 91FD	LD A,C	
-		; 91FE	LD ($8F17),A	
-		; 9201	PUSH HL	
+	MOV	R3, R0		; 91DF	LD A,L	
+	CMPB	R0, #120	; 91E0	CP $50	
+	BLO	L91EB		; 91E2	JP C,$91EB	
+	MOV	#L926F, R3	; 91E5	LD HL,$926F	"DESTROYED"
+	JMP	L911B		; 91E8	JP $911B	Print text
+L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)	
+	CMPB	R0, #376	; 91EC	CP $FE	
+	BLO	L91D9		; 91EE	JP NC,$91D9	
+	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	сохраняем адрес таблицы объектов
+				; 91F4	LD DE,$0008	to movement flags
+	ADD	#10, R3		; 91F7	ADD HL,DE	
+	BITB	#128., (R3)	; 91F8	BIT 7,(HL)	
+	BNE	L91DC		; 91FA	JP NZ,$91DC	
+	MOV	R1, R0		; 91FD	LD A,C	
+	MOVB	R0, L8F17	; 91FE	LD ($8F17),A	
+	PUSH	R3		; 9201	PUSH HL	
 		; 9202	LD DE,$92C6	
-		; 9205	LD H,$53	
+		; 9205	LD H,$53	Attributes?
 		; 9207	LD L,C	
 		; 9208	LD B,$04	
-		; 920A	LD A,(DE)	
+L920A:		; 920A	LD A,(DE)	
 		; 920B	LD (HL),A	
 		; 920C	INC DE	
 		; 920D	INC H	
@@ -719,23 +733,23 @@ L91C6:		; 91C6	LD A,R
 		; 9210	LD H,$53	
 		; 9212	INC L	
 		; 9213	LD B,$04	
-		; 9215	LD A,(DE)	
+L9215:		; 9215	LD A,(DE)	
 		; 9216	LD (HL),A	
 		; 9217	INC DE	
 		; 9218	INC H	
 		; 9219	DJNZ $9215	
-		; 921B	POP HL	
-		; 921C	DEC L	
-		; 921D	DEC L	
-		; 921E	RES 4,(HL)	
-		; 9220	DEC L	
-		; 9221	LD (HL),$00	
-		; 9223	LD DE,$0005	
-		; 9226	ADD HL,DE	
-		; 9227	LD (HL),$0E	
-		; 9229	CALL $92CE	Prepare objects
-		; 922C	CALL $95EF	
-	JMP	L910A		; 922F	JP $910A
+	POP	R3		; 921B	POP HL	
+	DEC	R3		; 921C	DEC L	
+	DEC	R3		; 921D	DEC L	
+	BIC	#100, (R3)	; 921E	RES 4,(HL)	
+	DEC	R3		; 9220	DEC L	
+	CLRB	(R3)		; 9221	LD (HL),$00	
+				; 9223	LD DE,$0005	
+	ADD	#5, R3		; 9226	ADD HL,DE	
+	MOVB	#14., (R3)	; 9227	LD (HL),$0E	
+	CALL	L92CE		; 9229	CALL $92CE	Prepare objects
+	CALL	L95EF		; 922C	CALL $95EF	
+	JMP	L910A		; 922F	JP $910A	continue main loop
 
 L9232:	.WORD	106705
 	.BYTE	131,212,135,131,143,143,131,137,136,115,121,122,137,142,144,125,124,212,376,000  ; "MISSION ABORTED"
@@ -744,6 +758,10 @@ L9247:	.WORD	106705
 	.BYTE	130,212,115,144,137,137,115,134,121,144,125,115,212,377  ; "TOO LATE"
 	.WORD	110305
 	.BYTE	131,212,135,131,143,143,131,137,136,115,144,125,142,135,131,136,121,144,125,124,212,376
+
+L926F:	.WORD	106705
+	.BYTE	131,212,115,124,125,143,144,142,137,151,125,124,115,212,376,000  ; "DESTROYED"
+
 L92A0:	.WORD	106705
 	.BYTE	131,312,140,121,145,143,125,115,135,137,124,125,312,376  ; "PAUSE MODE"
 	.EVEN
@@ -3049,11 +3067,11 @@ LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	CALL	LA8C5		; A37B	CALL $A8C5	|  show one screen in DEMO
 	POP	R1		; A37E	POP BC		|
-		; A37F	XOR A	
-		; A380	IN A,($FE)	TODO: Check keyboard
-		; A382	CPL	
-		; A383	AND $1F	
-		; A385	RET NZ	
+				; A37F	XOR A	
+	CALL	GETKEY		; A380	IN A,($FE)	Check keyboard
+	BEQ	1$		; A382	CPL	        key pressed?
+	RETURN			; A383	AND $1F		yes => exit DEMO
+1$:				; A385	RET NZ	
 	SOB	R1, LA37A	; A386	DJNZ $A37A      repeat
 	MOVB	L8F00, R0	; A388	LD A,($8F00)	Zone number?
 	CMPB	R0, #31.	; A38B	CP $1F		
@@ -3078,7 +3096,7 @@ LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	SWAB	R2
 	MOVB	R2, (R3)	; A3A5	LD (HL),E	
 	BR	LA36C		; A3A6	JR $A36C	repeat in the loop by zones
-; End of the DEMO MODE: the game screen painter red, and the sign showed at the center
+; End of the DEMO MODE: the game screen painted red, and the sign showed at the center
 LA3A8:
 		; A3A8	LD HL,$5800	attributes
 		; A3AB	LD C,$12	
@@ -3431,7 +3449,7 @@ LB0E1:
 		; B0E1	LD HL,$785A	
 		; B0E4	CALL $B203	Sound
 LB0E7:		; B0E7	XOR A	
-		; B0E8	IN A,($FE)	
+		; B0E8	IN A,($FE)	Check keyboard
 		; B0EA	CPL	
 		; B0EB	AND $1F	
 		; B0ED	JR NZ,$B0E7	
@@ -3718,7 +3736,7 @@ LB40D:	BISB	#1, (R3)	; B40D	LD A,(HL)
 LB41B:
 		; B41B	EX AF,AF'	
 		; B41C	XOR A	
-		; B41D	IN A,($FE)	
+		; B41D	IN A,($FE)	Check keyboard
 		; B41F	CPL	
 		; B420	AND $1F	
 		; B422	JR Z,$B426	
