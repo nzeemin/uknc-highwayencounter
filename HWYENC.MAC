@@ -104,7 +104,7 @@ LDBC0:	.BLKB	832.
 LDF00:	.BLKB	2560.
 LE900:	.BLKB	512.			; Условное начало второго теневого экрана
 LEB00:	.BLKB	4608.
-LFD00:	.BLKB	553.			; Область маркеров отрисовки
+LFD00:	.BLKB	553.			; Drawing markers area
 LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.EVEN
@@ -372,16 +372,16 @@ L8800:	.BYTE	376,000,000,000,000,000,002,000,002,000,022,000,004,110,270,022
 	.BYTE	102,230,000,055,357,370,031,000,000,014,015,232,000,102,230,000
 
 ; Таблица объектов, записи по 16. байт каждая
-;   IX+$01,IX+$02 -- адрес ??
-;   IX+$03,IX+$04 -- адрес на экране, плюс к нему добавляется смещение из $8F03
-;   IX+$05 -- ?? значения 000, 020, 030, 120, 160, 170, 340
-;   IX+$06 -- ?? характер движения
-;   IX+$07 -- направление, копируется из (IX+$0С) AND $07, значения 0..7
-;   IX+$08 -- movement flags ?? 0 = стоп, 1 = движение
-;   IX+$09 -- горизонтальное смещение (только биты 2-3)
-;   IX+$0A -- смещение от $8F00, где лежит номер спрайта
-;   IX+$0B -- номер процедуры из таблицы $9000
-;   IX+$0C -- ??
+;   +$01,+$02 -- address ??
+;   +$03,+$04 -- address on the screen, плюс к нему добавляется смещение из $8F03
+;   +$05 -- ?? values 000, 020, 030, 120, 160, 170, 340
+;   +$06 -- ?? movement pattern
+;   +$07 -- direction, copied from (IX+$0С) AND $07, values 0..7
+;   +$08 -- movement flags ?? 0 = stop, 1 = move
+;   +$09 -- horz offset (bits 2-3 only)
+;   +$0A -- offset from $8F00, where we have sprite number
+;   +$0B -- procedure number from table $9000
+;   +$0C -- ??
 L8A00:	.BYTE	034,250,003,364,300,000,000,005,000,010,016,000,000,044,260,000  ; Main Vorton
 L8A10:	.BYTE	044,230,003,161,301,160,020,000,001,010,015,000,000,030,130,000  ; 1st Auto-Vorton
 L8A20:	.BYTE	044,240,003,362,300,160,020,000,001,010,015,000,000,060,144,000  ; 2
@@ -392,7 +392,7 @@ L8A60:	.BYTE	376,171,002,115,323,030,001,000,004,014,021,026,000,376,260,000
 	.BYTE	376,316,003,134,300,030,001,000,004,014,022,026,000,376,260,000
 	.BYTE	376,322,003,035,300,030,001,000,004,004,021,026,000,376,260,000
 
-; Массив записей длиной по 16. байт каждая
+; Array of records, 16. bytes each
 ; последнее слово записи -- адрес куда копируются первые 14. байт
 L8A90:	.BYTE	012,172,003,021,305,340,026,000,000,000,015,204,000,012
 	.WORD	<L7B00+360>
@@ -456,9 +456,9 @@ L8AF0:	.BYTE	024,204,003,321,303,340,026,000,000,000,015,204,000,024
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377
 
-; Таблица объектов для отрисовки, порядок от дальних к ближним
-;   первое слово -- ?? (000 = конец таблицы) -- вместо первого байта сделано слово
-;   второе слово -- адрес в таблице $8A00
+; List of objects to draw, order from far to nearest by Z-coord
+;   1st word -- ?? (000 = end of table) -- вместо первого байта сделано слово
+;   2nd word -- address in $8A00 table
 L8D52:	.WORD	151, L8A20
 	.WORD	000, L8A40
 	.WORD	101, L8A30
@@ -483,7 +483,7 @@ L8D6A:	.WORD	000, L8A10
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,000
-; Таблица, связанная с движением объектов
+; Table used in object movement procedure
 L8E00:	.BYTE	000,002,000,004,340,377,341,377,377,001,000,004,000,000,001,000
 	.BYTE	376,000,000,004,040,000,041,000,377,377,377,000,040,000,040,000
 	.BYTE	000,376,377,374,040,000,037,000,001,377,377,374,000,000,377,377
@@ -507,24 +507,24 @@ L8E00:	.BYTE	000,002,000,004,340,377,341,377,377,001,000,004,000,000,001,000
 ; NOTE: Часть переменных находится из кода как ($8F00 + смещение), поэтому важно смещение от начала области переменных
 L8F00:	.BYTE	001	; Zone number?
 	.BYTE	0	; Filler
-L8F01:	.WORD	L8A00	; Адрес таблицы объектов, 16 байт на запись
+L8F01:	.WORD	L8A00	; Object table address, 16 bytes per record
 L8F03:	.WORD	5352	; Смещение при отрисовке спрайтов, добавляется к адресу на экране
 L8F05:	.WORD	0
 L8F07:	.WORD	260
 L8F09:	.WORD	200
 	.BYTE	0	; Filler
-L8F0D:	.BYTE	0	; +015 Номер спрайта Vorton
-L8F0E:	.BYTE	0	; +016 Номер спрайта Lasertron
+L8F0D:	.BYTE	0	; +015 Vorton sprite number
+L8F0E:	.BYTE	0	; +016 Lasertron sprite number
 L8F0F:	.BYTE	0
-L8F10:	.BLKB	3.	; +020, +021, +022 Номера спрайтов
+L8F10:	.BLKB	3.	; +020, +021, +022 -- sprite numbers
 L8F13:	.BYTE	0
 L8F14:	.BYTE	0	; Current action in animation mode (see A34D routine)
 L8F15:	.BYTE	0
-L8F16:	.BYTE	0	; Счётчик для индикации движения Lasertron
+L8F16:	.BYTE	0	; Counter for Lasertron movement indicator
 L8F17:	.BYTE	206
 L8F18:	.BYTE	226	; Low part of attribute address $5Axx
 L8F19:	.BYTE	326
-L8F0B:	.WORD	0	; Адрес в таблице 8D52; NOTE: Перенесено сюда для правильного выравнивания других полей
+L8F0B:	.WORD	0	; Address in 8D52 table; NOTE: Перенесено сюда для правильного выравнивания других полей
 L8F1A:	.WORD	6654	; Mission Time
 L8F1C:	.BYTE	1	; Zone number? $01..$1F
 L8F1D:	.BLKB	5.
@@ -590,11 +590,11 @@ L8F8A:
 	RETURN
 L8F93:	DEC	R0		; 8F93	DEC A	
 	MOVB	R0, L8F89	; 8F94	LD ($8F89),A	
-L8F97:	MOVB	6(R4), R0	; 8F97	LD A,(IX+$06)	
+L8F97:	MOVB	6(R4), R0	; 8F97	LD A,(IX+$06)	get movement pattern
 	BIC	#177420, R0	; 8F9A	RES 4,A	
 	CMP	R0, #5		; 8F9C	CP $05	
 	BHIS	L8FA3		; 8F9E	JR NC,$8FA3	
-	DECB	10(R4)		; 8FA0	DEC (IX+$08)	
+	DECB	10(R4)		; 8FA0	DEC (IX+$08)	alter movement
 L8FA3:				; 8FA3	LD DE,$0010	
 	ADD	#16., R4	; 8FA6	ADD IX,DE	
 	CMP	R4, #L8A00	; 8FA8	LD A,IXh	
@@ -692,7 +692,7 @@ L91C0:	MOV	#6654, R3	; 91C0	LD HL,$0DAC
 L91C3:	MOV	R3, L8F1A	; 91C3	LD ($8F1A),HL	save Mission Time
 L91C6:		; 91C6	LD A,R	
 		; 91C8	SLL A	
-	MOV	L8F01, R3	; 91CA	LD HL,($8F01)	берём адрес таблицы объектов
+	MOV	L8F01, R3	; 91CA	LD HL,($8F01)	get object table address
 	MOVB	L8F17, R1	; 91CD	LD A,($8F17)	
 	BIC	#177400, R1	; 91D0	LD C,A	
 		; 91D1	JR NC,$91C6	delay
@@ -786,7 +786,7 @@ L92D7:	MOVB	(R4), R0	; 92D7	LD A,(IX+$00)
 	ADD	#16., R4	; 92F1	ADD IX,BC	переходим к следующей записи
 	BR	L92D7		; 92F3	JR $92D7	продолжаем цикл
 L92F5:
-	MOV	L8F01, R3	; 92F5	LD HL,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R3	; 92F5	LD HL,($8F01)	object table address
 	INC	R3		; 92F8	INC HL	
 	MOVB	(R3)+, R2	; 92F9	LD E,(HL)	
 	BIC	#177400, R2	; 92FA	INC HL	
@@ -828,7 +828,7 @@ L9323:	POP	R2		; 9323	POP DE
 	BR	L9313		; 932F	JR $9313	
 L9331:	POP	R2		; 9331	POP DE	
 	MOV	R3, L8F07	; 9332	LD ($8F07),HL	
-	MOV	#177720, R1	; 9335	LD BC,$FFD0	
+	MOV	#177720, R1	; 9335	LD BC,$FFD0	-30.
 	ADD	R1, R3		; 9338	ADD HL,BC	
 	MOV	R3, L8F09	; 9339	LD ($8F09),HL	
 	MOV	#177600, R1	; 933C	LD BC,$FF80	
@@ -837,7 +837,7 @@ L9331:	POP	R2		; 9331	POP DE
 	MOV	R4, L8F03	; 9343	LD ($8F03),IX	
 	MOV	#L8F00, R3	; 9347	LD HL,$8F00	
 			; 934A	EX AF,AF'	
-	MOVB	R0, L8F1C	; 934B	LD ($8F1C),A	Zone number?
+	MOVB	R0, L8F1C	; 934B	LD ($8F1C),A	Zone number
 	CMPB	R0, #40		; 934E	CP $20	        zone 32. ?
 	BLO	L9359		; 9350	JR C,$9359	less => jump
 	MOV	#40, R0		; 9352	LD A,$20	
@@ -905,12 +905,12 @@ L93A9:	MOVB	(R3)+, R0	; 93A9	LD A,(HL)	получаем 8 пикселов спрайта
 	MOV	R2, @#176640	; 93AA	LD (DE),A	пишем в экран
 	MOV	R0, @#176642	; 93AB	INC HL	
 	ADD	#80., R2	; 93AC	INC D		next line
-	SOB	R1, L93A9	; 93AD	DJNZ $93A9	повторяем
+	SOB	R1, L93A9	; 93AD	DJNZ $93A9	repeat
 	POP	R3		; 93AF	POP HL	
 				; 93B0	INC HL	
 				; 93B1	INC IX	
 				; 93B3	DEC C	
-	SOB	R5, L9396	; 93B4	JR NZ,$9396	повторяем
+	SOB	R5, L9396	; 93B4	JR NZ,$9396	repeat
 	RETURN			; 93B6	RET
 
 ; Сюда переходим после рисования цифр ZONE
@@ -978,12 +978,12 @@ L941A:	ADD	R1, R4		; 941A	ADD IX,BC	| next record
 L9423:
 	MOV	#L8A00, R4	; 9423	LD IX,$8A00	адрес таблицы объектов
 	MOVB	#14., 12(R4)	; 9427	LD (IX+$0A),$0E	 индекс спрайта -- первая запись это Vorton
-	CLRB	6(R4)		; 942B	LD (IX+$06),$00	 характер движения -- обычное
+	CLRB	6(R4)		; 942B	LD (IX+$06),$00	 movement pattern -- обычное
 	MOV	#16., R2	; 942F	LD DE,$0010	ширина записи = 16.	
 	MOVB	#4, R1		; 9432	LD B,$04	счётчик цикла
 L9434:	ADD	R2, R4		; 9434	ADD IX,DE	<
 	MOV	#13., 12(R4)	; 9436	LD (IX+$0A),$0D	|  индекс спрайта
-	MOV	#16., 6(R4)	; 943A	LD (IX+$06),$10	|  характер движения
+	MOV	#16., 6(R4)	; 943A	LD (IX+$06),$10	|  movement pattern
 	SOB	R1, L9434	; 943E	DJNZ $9434	продолжаем цикл
 	MOV	#L8A90, R3	; 9440	LD HL,$8A90	адрес таблицы
 	MOVB	#377, (R3)	; 9443	LD (HL),$FF	очищаем таблицу
@@ -991,14 +991,14 @@ L9434:	ADD	R2, R4		; 9434	ADD IX,DE	<
 	MOV	#249., R1	; 9449	LD B,$F9	счётчик цикла = 249.
 L944B:	PUSH	R1		; 944B	PUSH BC		+1, сохраняем счётчик
 	MOV	#L8F4A, R3	; 944C	LD HL,$8F4A	
-	MOVB	6(R4), R0	; 944F	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 944F	LD A,(IX+$06)	movement pattern
 	BIC	#177420, R0	; 9452	RES 4,A	
 	CMPB	R0, #11.	; 9454	CP $0B	
 	BLO	L945D		; 9456	JR C,$945D	
 	MOVB	#8., 6(R4)	; 9458	LD A,$08	
-				; 945A	LD (IX+$06),A	записываем характер движения
+				; 945A	LD (IX+$06),A	set movement pattern
 L945D:	MOV	#22., R2	; 945D	LD DE,$0016	
-	MOVB	6(R4), R0	; 9460	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9460	LD A,(IX+$06)	get movement pattern
 	BITB	#20, R0		; 9463	BIT 4,A	
 	BEQ	L9468		; 9465	JR Z,$9468	
 	ADD	R2, R3		; 9467	ADD HL,DE	
@@ -1026,7 +1026,7 @@ L9468:	BIC	#177760, R0	; 9468	AND $0F
 	MOVB	10(R4), R0	; 948D	LD A,(IX+$08)	
 	CMP	R0, #5		; 9490	CP $05	
 	BHIS	L94A0		; 9492	JR NC,$94A0	
-	MOVB	6(R4), R0	; 9494	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9494	LD A,(IX+$06)	get movement pattern
 	BIC	#177420, R0	; 9497	RES 4,A	
 	CMPB	R0, #9.		; 9499	CP $09	
 	BHIS	L94A0		; 949B	JR NC,$94A0	
@@ -1080,7 +1080,7 @@ L94A4:	MOVB	(R4), R0	; 94A4	LD A,(IX+$00)
 	SUB	R5, R0
 	BIC	#177771, R0	; 94E7	AND $06	
 	ASLB	R0		; 94E9	SLA A	
-	MOVB	R0, 11(R4)	; 94EB	LD (IX+$09),A	сохраняем горизонтальное смещение
+	MOVB	R0, 11(R4)	; 94EB	LD (IX+$09),A	save horz offset
 L94EE:	ADD	#16., R4	; 94EE	LD DE,$0010	к следующей записи
 				; 94F1	ADD IX,DE	
 	POP	R1		; 94F3	POP BC		0, восстанавливаем счётчик
@@ -1230,18 +1230,18 @@ L96BD:				; 96BD	EX AF,AF'
 	MOVB	(R3)+, (R4)	; 96BE	LD A,(HL)	<  берём 8 пикселей
 				; 96BF	LD (IX+$00),A	|  пишем 8 пикселей
 				; 96C2	INC HL		|
-	ADD	R2, R4		; 96C3	ADD IX,DE	|  к следующей строке
+	ADD	R2, R4		; 96C3	ADD IX,DE	|  to next line
 				; 96C5	EX AF,AF'	|
 	SOB	R0, L96BD	; 96C6	DEC A		|
 				; 96C7	JR NZ,$96BD	повторяем цикл по строкам
 	MOV	L965B, R3	; 96C9	LD HL,($965B)	
 	INC	R3		; 96CC	INC HL		|
-	SOB	R5, L969C	; 96CD	DJNZ $969C	повторяем цикл
+	SOB	R5, L969C	; 96CD	DJNZ $969C	repeat
 	POP	R2		; 96CF	POP DE	
 	POP	R2		; 96D0	POP DE	
 	POP	R4		; 96D1	POP IX	
-	INC	R2		; 96D3	INC DE		к следующему столбцу
-	INC	R4		; 96D4	INC IX	        к следующему столбцу
+	INC	R2		; 96D3	INC DE		to next column
+	INC	R4		; 96D4	INC IX	        to next column
 	MOV	L9659, R3	; 96D6	LD HL,($9659)	
 	INC	R3		; 96D9	INC HL	
 				; 96DA	LD A,IXl	| 
@@ -1251,7 +1251,7 @@ L96BD:				; 96BD	EX AF,AF'
 				; 96E3	DEC A		|
 				; 96E4	LD ($9658),A	|
 	DEC	R1		; 96E7	DEC C		|
-	BNE	L967D		; 96E8	JR NZ,$967D	повторяем цикл
+	BNE	L967D		; 96E8	JR NZ,$967D	repeat
 ; Цикл рисования нижних столбцов фона
 	MOVB	#1, L9658	; 96EA	LD A,$01	initial column height
 				; 96EC	LD ($9658),A	
@@ -1361,21 +1361,21 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	SOB	R1, L978D	; 9797	DJNZ $978D	
 ; NOTE: 9799..97A4 code fills attributes, removed
 ;
-; Вывод экрана D905 на реальный экран
+; Draw screen D905 on the real screen
 	MOV	#176640, R4	; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5	; Адрес порта данных косвенной записи УКНЦ
 	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905	
 	MOV	#105504, R2	; 97A9	LD DE,$4000	Screen address
-	MOV	#144., R0	; Количество копируемых строк
+	MOV	#144., R0	; Number of lines to copy
 10$:	PUSH	R0
-	MOV	#32., R1	; Байт в строке
+	MOV	#32., R1	; 32. bytes in line
 20$:	MOVB	(R3)+, R0
 	BIC    	#177400, R0
-	MOV	R2, (R4)	; Устанавливаем адрес
-	MOV	R0, (R5)	; Пишем в экран	
+	MOV	R2, (R4)	; Set address
+	MOV	R0, (R5)	; Write into the screen
 	INC	R2
 	SOB	R1, 20$
-	ADD	#<80.-32.>, R2	; Следующая строка
+	ADD	#<80.-32.>, R2	; Next line
 	POP	R0
 	SOB	R0, 10$
 ; Копирование подготовленного теневого экрана на второй теневой экран
@@ -1412,7 +1412,7 @@ L97F6:	PUSH	R1		; 97F6	PUSH BC
 	INC	R5		; 980E	INC C	
 	INC	R5		; 980F	INC C	
 	SOB	R4, L97F4	; 9810	DJNZ $97F4
-; Очищаем область маркеров отрисовки
+; Clean drawing markers area
 	MOV	#LFD00,	R3	; 9812	LD HL,$FD00	
 				; 9815	LD DE,$FD01	
 				; 9818	LD (HL),$00	
@@ -1471,7 +1471,7 @@ L9859:	RETURN			; 9859	RET
 ; Routine: Prepare table 8D52 (sort out objects by depth), and draw the objects
 ; Used by the routines at 90F2, A34D, A8C5.
 L985A:	
-	MOV	L8F01, R4	; 985A	LD IX,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R4	; 985A	LD IX,($8F01)	object table address
 	MOV	#L8D52, R3	; 985E	LD HL,$8D52	начало таблицы 8D52
 	MOV	R3, L8F0B	; 9861	LD ($8F0B),HL	сохраняем адрес в таблице 8D52
 	CLRB	(R3)		; 9864	LD (HL),$00	очищаем таблицу
@@ -1481,7 +1481,7 @@ L9866:	MOVB	(R4), R0	; 9866	LD A,(IX+$00)
 	BEQ	L98D4		; 986B	JP Z,$98D4	да => пропускаем
 	BHIS	L98DC		; 986E	JP NC,$98DC	конец таблицы => переходим к отрисовке
 	MOV	R0, R1		; 9871	LD B,A	
-	MOVB	6(R4), R0	; 9872	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9872	LD A,(IX+$06)	movement pattern
 	BIC	#177400, R0
 	CMPB	R0, #22.	; 9875	CP $16	
 	BEQ	L98D4		; 9877	JP Z,$98D4	=> переходим к следующей записи	
@@ -1577,7 +1577,7 @@ L98E2:
 	MOV	(R3), R2	; 98F8	LD E,(HL)	
 				; 98F9	INC HL	
 				; 98FA	LD D,(HL)	DE = sprite address
-	MOVB	11(R4), R1	; 98FB	LD A,(IX+$09)	get horz shift (bits 2-3 only)	
+	MOVB	11(R4), R1	; 98FB	LD A,(IX+$09)	get horz offset (bits 2-3 only)	
 	BIC	#177763, R1
 	ASR	R1		; 98FE	ADD A,A	        bits 3-4
 				; 98FF	LD C,A	
@@ -1903,8 +1903,8 @@ L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)
 
 ; Routine -- Draw the shadow screen on the real screen
 L9A9B:
-	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	Адрес массива записей о строках теневого экрана
-	MOV	(R3), R0	; 9A9E	LD A,(HL)	NOTE: Здесь byte заменён на word
+	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	Address of table with shadow screen line addresses
+	MOV	(R3), R0	; 9A9E	LD A,(HL)	NOTE: byte replaced to word
 L9A9F:	INC	R3		; 9A9F	INC HL	
 	INC	R3
 	MOV	(R3)+, R2	; 9AA0	LD E,(HL)	
@@ -1929,7 +1929,7 @@ L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  да => переходим
 	DEC	R0		; 9AB5	DEC A		|
 	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|
-	MOV	R1, R5		; 9AB7	LD IXl,B	|  сохраняем B
+	MOV	R1, R5		; 9AB7	LD IXl,B	|  save B
 	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
 L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
 	BIC	#177400, R0			;	|  |
@@ -1943,7 +1943,7 @@ L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
 				; 9AC4	LD A,D	        |
 	ADD	#640., R2	; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
 	ADD	#256., R3	; 9AC7	LD D,A	        |  
-	MOV	R5, R1		; 9AC8	LD B,IXl	|  восстанавливаем B
+	MOV	R5, R1		; 9AC8	LD B,IXl	|  restore B
 L9ACA:						;	|
 	DEC	R3		; 9ACA	DEC L		|
 	DEC	R2		; 9ACB	DEC E		|  к предыдущей позиции в строке
@@ -1962,10 +1962,10 @@ L9ACA:						;	|
 	SUB	R0, R1		; 9AE1	LD A,$6A	
 	MOV	R1, R0		; 9AE3	SUB B	
 	ADD	R0, R0		; 9AE4	ADD A,A	
-L9AE5:	NOP			; 9AE5	LD B,$C8	
+L9AE5:	;NOP			; 9AE5	LD B,$C8	
 ;L9AE7:	SOB	R1, L9AE7	; 9AE7	DJNZ $9AE7	
 				; 9AE9	DEC A	
-	SOB	R0, L9AE5	; 9AEA	JR NZ,$9AE5	delay
+;	SOB	R0, L9AE5	; 9AEA	JR NZ,$9AE5	delay
 	BR	L9B72		; 9AEC	JP $9B72	
 ;
 L9AEF:	MOVB	L8F15, R0	; 9AEF	LD A,($8F15)	
@@ -2054,7 +2054,7 @@ L9B8C:	ADD	R2, R3		; 9B8C	ADD HL,DE
 				; 9BAD	LD A,L	
 				; 9BAE	CP $F0	
 	BHIS	L9BE2		; 9BB0	JP NC,$9BE2	greater => movement
-L9BB3:	MOV	L8F01, R3	; 9BB3	LD HL,($8F01)	
+L9BB3:	MOV	L8F01, R3	; 9BB3	LD HL,($8F01)	object table address
 	MOVB	(R3), R0	; 9BB6	LD A,(HL)	
 	BIC	#177400, R0
 	CMPB	R0, #54		; 9BB7	CP $2C	
@@ -2096,7 +2096,7 @@ L9BE2:	MOVB	L8F16, R0	; 9BE2	LD A,($8F16)	get the counter
 	MOV	#1, R1		; 9BF3	LD B,$01	
 	CALL	LA414		; 9BF5	CALL $A414	increment score
 	MOV	#66., R0	; 9BF8	LD A,$42	
-	BR	L9BD9		; 9BFA	JR $9BD9        показываем индикацию движения
+	BR	L9BD9		; 9BFA	JR $9BD9        show movement indication
 
 ; Data block: 18 records used to draw the shadow screen
 L9BFC:	.WORD	012, <LFD00-1027>, 133775, <LFD00+553.>	; 0A FAE9 5729 FF29  line 18
@@ -2121,17 +2121,17 @@ L9BFC:	.WORD	012, <LFD00-1027>, 133775, <LFD00+553.>	; 0A FAE9 5729 FF29  line 1
 
 ; Routine: Process object movement
 L9C7B:
-	MOV	L8F01, R4	; 9C7B	LD IX,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R4	; 9C7B	LD IX,($8F01)	object table address
 	MOVB	(R4), R0	; 9C7F	LD A,(IX+$00)	
 	BIC	#177400, R0
 	CMPB	R0, #376	; 9C82	CP $FE		skip?
-	BLO	1$		; 9C84	JP NC,$9E1A	no => jump
-	JMP	L9E1A		;			next record by IX
+	BLO	1$		; 9C84	JP NC,$9E1A	yes => next record by IX
+	JMP	L9E1A
 1$:	MOVB	10(R4), R0	; 9C87	LD A,(IX+$08)	movement flags
 	BIC	#177400, R0
 	BITB	R0, #128.	; 9C8A	BIT 7,A	
 	BEQ	L9C96		; 9C8C	JP Z,$9C96	
-	CLRB	7(R4)		; 9C8F	LD (IX+$07),$00	 set direction to forward/default
+	CLRB	7(R4)		; 9C8F	LD (IX+$07),$00	 set direction = forward/default
 	BR	L9CDB		; 9C93	JP $9CDB	
 L9C96:	MOVB	2(R4), R3	; 9C96	LD L,(IX+$01)	
 	BIC	#177400, R3
@@ -2156,20 +2156,21 @@ L9CA8:	MOV	L8F07, R2	; 9CA8	LD DE,($8F07)
 ; Мы вышли из этой зоны, переходим к другой
 L9CB9:	CALL	L92CE		; 9CB9	CALL $92CE	Prepare objects
 	CALL	L95EF		; 9CBC	CALL $95EF	Show the screen
-	MOV	L8F01, R4	; 9CBF	LD IX,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R4	; 9CBF	LD IX,($8F01)	object table address
 L9CC3:	MOVB	10(R4), R0	; 9CC3	LD A,(IX+$08)	get movement flags
 	BIC	#177400, R0	; 9CC6	AND A	        stopped?
 	BNE	L9D29		; 9CC7	JP NZ,$9D29	no => jump
 	JMP	L9E1A		; 9CCA	JP $9E1A	next record by IX
-; Process the record
-L9CCD:	MOVB	10(R4), R0	; 9CCD	LD A,(IX+$08)	movement flags
+; Process the IX record
+L9CCD:	MOVB	10(R4), R0	; 9CCD	LD A,(IX+$08)	get movement flags
 	BIC	#177500, R0	; 9CD0	RES 6,A	
 				; 9CD2	AND A	
 	BNE	1$		; 9CD3	JP Z,$9E1A	=> next record by IX
 	JMP	L9E1A
 1$:	BITB	#200, R0	; 9CD6	BIT 7,A	
 	BEQ	L9D29		; 9CD8	JP Z,$9D29	
-L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	фаза спрайта?
+; (IX+$08) bit 7 = 1
+L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	sprite phase?
 	BIC	#177400, R0
 	ADD	#8., R0		; 9CDE	ADD A,$08	
 	CMP	R0, #220.	; 9CE0	CP $DC
@@ -2179,7 +2180,7 @@ L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	фаза спрайта?
 	JMP	L9E1A		; 9CEC	JP $9E1A	next record by IX
 L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A	
 	MOV	#L8F15, R3	; 9CF2	LD HL,$8F15	
-	MOVB	6(R4), R0	; 9CF5	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9CF5	LD A,(IX+$06)	get movement pattern
 	BIC	#177420, R0	; 9CF8	RES 4,A	
 				; 9CFA	AND A	
 	BEQ	L9D0B		; 9CFB	JR Z,$9D0B	
@@ -2253,11 +2254,11 @@ L9D53:	SUB	#7, R0		; 9D53	SUB $07
 	MOV	#14., R0	; 9D64	LD A,$0E	
 	JMP	L9E62		; 9D66	JP $9E62	
 L9D69:	ADD	R2, R3		; 9D69	ADD HL,DE
-				; 9D6A	LD DE,$FFF9	
+				; 9D6A	LD DE,$FFF9	-7
 	SUB	#7, R3		; 9D6D	ADD HL,DE	
 	MOV	R3, R1		; 9D6E	LD B,H	
 				; 9D6F	LD C,L	
-	MOV	L8F01, R3	; 9D70	LD HL,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R3	; 9D70	LD HL,($8F01)	object table address
 ; Process next object record pointed by HL
 L9D73:	MOVB	(R3), R0	; 9D73	LD A,(HL)	
 	BIC	#177400, R0
@@ -2280,7 +2281,7 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	INC	R3		; 9D96	INC L	
 	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	
 	BIC	#177400, R0	; 9D98	INC L	
-	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	добавляем горизонтальное смещение (bits 2-3 only)
+	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	add horz offset (bits 2-3 only)
 	ADD	R5, R0
 	BIC	#177400, R0
 	CMPB	R0, #13.	; 9D9C	CP $0D	
@@ -2292,7 +2293,7 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 L9DA9:	SUB	#16., R0	; 9DA9	SUB $10	
 L9DAB:	INC	R3		; 9DAB	INC L	
 	INC	R3		; 9DAC	INC L	
-L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	сохраняем горизонтальное смещение
+L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	save horz offset
 	MOVB	(R3)+, R2	; 9DB0	LD E,(HL)	
 	BIC	#177400, R2	; 9DB1	INC L	
 	SWAB	R2
@@ -2306,7 +2307,7 @@ L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	сохраняем горизонтальное смещение
 	MOVB	R3, 3(R4)	; 9DBA	LD (IX+$03),L	
 	SWAB	R3
 	MOVB	R3, 4(R4)	; 9DBD	LD (IX+$04),H	
-	MOVB	6(R4), R0	; 9DC0	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9DC0	LD A,(IX+$06)	movement pattern
 	BIC	#177400, R0
 	CMPB	R0, #4		; 9DC3	CP $04	
 	BNE	L9DE0		; 9DC5	JP NZ,$9DE0
@@ -2332,20 +2333,20 @@ L9DC8:	CALL	LA270		; 9DC8	CALL $A270	get next random number
 L9DE0:	BIC	#16., R0	; 9DE0	RES 4,A	
 	CMPB	R0, #3		; 9DE2	CP $03	
 	BNE	L9E0D		; 9DE4	JP NZ,$9E0D
-; (IX+$06) == $03 or $13 : Move to the left or right with 10/256 probability each
+; (IX+$06) == $03 or $13 : Rotate to the left or right with 10/256 probability each
 	CALL	LA270		; 9DE7	CALL $A270	get next random number
 	MOV	R3, R0		; 9DEA	LD A,L	
 	CMPB	R0, #245.	; 9DEB	CP $F5	        x < 245. ?
 	BLO	L9DFC		; 9DED	JP C,$9DFC	yes => jump
 	MOVB	7(R4), R0	; 9DF0	LD A,(IX+$07)	get current direction
-	DEC	R0		; 9DF3	DEC A		move left
+	DEC	R0		; 9DF3	DEC A		rotate left
 	BIC	#177770, R0	; 9DF4	AND $07		0..7
 	MOVB	R0, 7(R4)	; 9DF6	LD (IX+$07),A	set the direction
 	BR	L9E1A		; 9DF9	JP $9E1A	next record by IX
 L9DFC:	CMPB	R0, #10.	; 9DFC	CP $0A		x >= 10. ?
 	BHIS	L9E1A		; 9DFE	JP NC,$9E1A	yes => jump
 	MOVB	7(R4), R0	; 9E01	LD A,(IX+$07)	get current direction
-	INC	R0		; 9E04	INC A	        move right
+	INC	R0		; 9E04	INC A	        rotate right
 	BIC	#177770, R0	; 9E05	RES 3,A		0..7
 	MOVB	R0, 7(R4)	; 9E07	LD (IX+$07),A	set the direction
 	BR	L9E1A		; 9E0A	JP $9E1A	next record by IX
@@ -2354,10 +2355,10 @@ L9E0D:	CMP	R0, #10.	; 9E0D	CP $0A		= 10. ?
 	BNE	L9E1A		; 9E0F	JP NZ,$9E1A	no => next record by IX
 ; (IX+$06) == $0A or $1A
 L9E12:	BICB	#64., 10(R4)	; 9E12	RES 6,(IX+$08)	
-	ASRB	10(R4)		; 9E16	SRL (IX+$08)
+	ASRB	10(R4)		; 9E16	SRL (IX+$08)	alter movement
 ; Proceed to the next record by IX
 L9E1A:				; 9E1A	LD DE,$0010	
-	ADD	#16., R4	; 9E1D	ADD IX,DE	next record
+	ADD	#16., R4	; 9E1D	ADD IX,DE	next record by IX
 	MOVB	(R4), R0	; 9E1F	LD A,(IX+$00)	
 	BIC	#177400, R0
 	CMPB	R0, #376	; 9E22	CP $FE	
@@ -2386,23 +2387,24 @@ L9E2B:	SUB	R5, R0		; 9E2B	SUB IYl		use stored A
 				; 9E3F	LD A,E	
 	CMP	R2, #15.	; 9E40	CP $0F	
 	BLO	L9E4C		; 9E42	JP C,$9E4C	
+; HL points to (+$02), and we proceed to the next record by HL
 L9E45:				; 9E45	LD DE,$000E	
 	ADD	#14., R3	; 9E48	ADD HL,DE	HL points to next record
 	JMP	L9D73		; 9E49	JP $9D73	continue by HL
 L9E4C:	MOV	R4, R0		; 9E4C	LD A,IXl	
 	INC	R0		; 9E4E	INC A	
 	INC	R0		; 9E4F	INC A	
-	CMP	R0, R3		; 9E50	CP L
+	CMP	R0, R3		; 9E50	CP L		IX and HL points to the same record?
 				; 9E51	JR NZ,$9E58	
 				; 9E53	LD A,IXh	
 				; 9E55	CP H	
-	BEQ	L9E45		; 9E56	JR Z,$9E45	
+	BEQ	L9E45		; 9E56	JR Z,$9E45	yes => next record by HL
 	MOV	R3, R2		; 9E58	LD A,$04	
 	ADD	#4, R3		; 9E5A	ADD A,L		
 				; 9E5B	EX DE,HL	DE points to (+$02)
 				; 9E5C	LD L,A	
 				; 9E5D	LD H,D		HL points to (+$06)
-	MOVB	(R3), R0	; 9E5E	LD A,(HL)	характер движения
+	MOVB	(R3), R0	; 9E5E	LD A,(HL)	movement pattern
 	BIC	#177420, R0	; 9E5F	RES 4,A	
 	ADD	R0, R0		; 9E61	ADD A,A	
 L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	get continuation point number
@@ -2419,11 +2421,12 @@ L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	get continuation point number
 ; Continuation points, called using $9000 table
 ; DE points to (+$02) for loop by HL
 ;
+; Cont.point: push Lasertron?
 L9E6D:				; 9E6D	LD A,$04	
 	MOV	R2, R3		; 9E6F	EX DE,HL	HL points to (+$02)
 	ADD	#4, R3		; 9E70	ADD A,L	
 				; 9E71	LD L,A		HL points to (+$06)
-	BITB	#20, (R3)	; 9E72	BIT 4,(HL)	alter характер движения
+	BITB	#20, (R3)	; 9E72	BIT 4,(HL)	alter movement pattern
 	BNE	L9E12		; 9E74	JP NZ,$9E12	alter IX movement and next by IX
 L9E77:	INC	R3		; 9E77	INC L		HL points to (+$07)
 	MOVB	7(R4), R0	; 9E78	LD A,(IX+$07)	direction
@@ -2436,7 +2439,7 @@ L9E77:	INC	R3		; 9E77	INC L		HL points to (+$07)
 	MOVB	#1, (R3)	; 9E85	LD (HL),$01	set movement = move
 	MOVB	#1, 10(R4)	; 9E87	LD (IX+$08),$01	 set movement = move
 	BR	L9E1A		; 9E8B	JP $9E1A	next record by IX
-;
+; Cont.point
 L9E8E:				; 9E8E	LD A,$04	
 	MOV	R2, R3		; 9E90	EX DE,HL	HL points to (+$02)
 	ADD	#4, R3		; 9E91	ADD A,L	
@@ -2449,7 +2452,7 @@ L9E8E:				; 9E8E	LD A,$04
 	BR	L9E12		; 9EA0	JP $9E12	alter IX movement and next by IX
 L9EA3:	BICB	#100, R0	; 9EA3	RES 6,A
 	MOVB	R0, 10(R4)	; 9EA5	LD (IX+$08),A	set movement
-	BITB	#20, (R3)	; 9EA8	BIT 4,(HL)	check характер движения
+	BITB	#20, (R3)	; 9EA8	BIT 4,(HL)	check movement pattern
 	BNE	L9EAE		; 9EAA	JR NZ,$9EAE	
 	ASR	R0		; 9EAC	SRL A	
 L9EAE:	INC	R3		; 9EAE	INC L	
@@ -2460,7 +2463,7 @@ L9EAE:	INC	R3		; 9EAE	INC L
 	MOVB	7(R4), R0	; 9EB4	LD A,(IX+$07)	get direction
 	MOVB	R0, (R3)	; 9EB7	LD (HL),A	copy direction
 	BR	L9E1A		; 9EB8	JP $9E1A	next record by IX
-;
+; Cont.point
 L9EBB:	MOVB	#376, (R4)	; 9EBB	LD (IX+$00),$FE	 mark IX record as empty
 L9EBF:				; 9EBF	LD A,$05	
 	MOV	R2, R3		; 9EC1	EX DE,HL	HL points to (+$02)
@@ -2470,16 +2473,16 @@ L9EBF:				; 9EBF	LD A,$05
 	MOVB	R0, (R3)	; 9EC7	LD (HL),A	copy direction
 	MOVB	10(R4), R0	; 9EC8	LD A,(IX+$08)	get movement
 	DEC	R3		; 9ECB	DEC L		HL points to (+$06)
-	BITB	#20, (R3)	; 9ECC	BIT 4,(HL)	check характер движения
+	BITB	#20, (R3)	; 9ECC	BIT 4,(HL)	check movement pattern
 	BNE	L9ED2		; 9ECE	JR NZ,$9ED2	
 	ASR	R0		; 9ED0	SRL A	
 L9ED2:	INC	R3		; 9ED2	INC L		
 	INC	R3		; 9ED3	INC L		HL points to (+$08)
 	BISB	#100, R0	; 9ED4	SET 6,A	
 	MOVB	R0, (R3)	; 9ED6	LD (HL),A	set movement
-; Точка продолжения 000
+; Cont.point: Main Vorton vs Auto-Vortons?
 L9ED7:	MOV	#L8F15, R3	; 9ED7	LD HL,$8F15	
-	MOVB	6(R4), R0	; 9EDA	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; 9EDA	LD A,(IX+$06)	movement pattern
 	BIC	#177400, R0	; 9EDD	AND A	
 	BEQ	L9EEA		; 9EDE	JR Z,$9EEA	
 	CMPB	R0, #1		; 9EE0	CP $01	
@@ -2496,10 +2499,10 @@ L9EF2:	CLR	R0		; 9EF2	XOR A
 	MOVB	#4, R0		; 9EFA	LD A,$04	
 L9EFC:	MOVB	R0, L8F1D	; 9EFC	LD ($8F1D),A	
 	JMP	L9E1A		; 9EFF	JP $9E1A	next record by IX
-;
+; Cont.point
 L9F02:	MOV	R2, R3		; 9F02	EX DE,HL	HL points to (+$02)
-	JMP	L9E45		; 9F03	JP $9E45
-;
+	JMP	L9E45		; 9F03	JP $9E45	next record by HL
+; Cont.point
 L9F06:	MOV	R2, R3		; 9F06	EX DE,HL	HL points to (+$02)
 	DEC	R3		; 9F07	DEC L	
 	DEC	R3		; 9F08	DEC L		HL points to (+$00)
@@ -2511,7 +2514,7 @@ L9F06:	MOV	R2, R3		; 9F06	EX DE,HL	HL points to (+$02)
 	MOV	#25., R1	; 9F18	LD B,$19	plus 25. points
 	CALL	LA414		; 9F1A	CALL $A414	Increment score
 	JMP	L9E1A		; 9F1D	JP $9E1A	next record by IX
-;
+; Cont.point
 L9F20:	MOV	R2, R3		; 9F20	EX DE,HL	HL points to (+$02)
 				; 9F21	LD A,$06	
 	ADD	#6, R3		; 9F23	ADD A,L	
@@ -2519,14 +2522,14 @@ L9F20:	MOV	R2, R3		; 9F20	EX DE,HL	HL points to (+$02)
 	MOVB	(R3), R2	; 9F25	LD E,(HL)	get movement flags
 	DEC	R3		; 9F26	DEC L	
 	DEC	R3		; 9F27	DEC L		HL points to (+$06)
-	MOVB	(R3), R0	; 9F28	LD D,(HL)	get характер движения
+	MOVB	(R3), R0	; 9F28	LD D,(HL)	get movement pattern
 				; 9F29	LD A,L	
 	SUB	#6, R3		; 9F2A	SUB $06	
 				; 9F2C	LD L,A		HL points to (+$00)
 	BITB	#200, R2	; 9F2D	BIT 7,E		check movement
 	BEQ	L9F32		; 9F2F	JP NZ,$9D7B	not equal => next record by HL
 	JMP	L9D7B
-L9F32:				; 9F32	LD A,D		характер движения
+L9F32:				; 9F32	LD A,D		movement pattern
 	CMPB	R0, #22.	; 9F33	CP $16	
 	BEQ	L9ED7		; 9F35	JP Z,$9ED7	
 	CMPB	R0, #6		; 9F38	CP $06	
@@ -2536,10 +2539,10 @@ L9F32:				; 9F32	LD A,D		характер движения
 	MOVB	#376, (R3)	; 9F42	LD (HL),$FE	mark HL record as empty
 L9F44:	BISB	#200, 10(R4)	; 9F44	SET 7,(IX+$08)	alter movement flags
 	MOVB	#200, 5(R4)	; 9F48	LD (IX+$05),$80	
-	MOV	#L8F15, R3	; 9F4C	LD HL,$8F15	
-	BISB	#100, (R3)	; 9F4F	SET 6,(HL)	
+				; 9F4C	LD HL,$8F15	
+	BISB	#100, L8F15	; 9F4F	SET 6,(HL)	
 	JMP	L9E1A		; 9F51	JP $9E1A	next record by IX
-;
+; Cont.point
 L9F54:	MOV	R2, R3		; 9F54	EX DE,HL	HL points to (+$02)
 				; 9F55	LD A,$06	
 	ADD	#6, R3		; 9F57	ADD A,L		HL points to (+$08)
@@ -2548,9 +2551,9 @@ L9F54:	MOV	R2, R3		; 9F54	EX DE,HL	HL points to (+$02)
 	BNE	L9F76		; 9F5B	JP NZ,$9F76	
 	MOVB	#376, (R4)	; 9F5E	LD (IX+$00),$FE	 mark IX record as empty
 	BISB	#200, (R3)	; 9F62	SET 7,(HL)	alter movement flags
-	DEC	R3		; 9F64	DEC L	
-	DEC	R3		; 9F65	DEC L	
-	DEC	R3		; 9F66	DEC L		HL points to (+$05)
+				; 9F64	DEC L	
+				; 9F65	DEC L	
+	SUB	#3, R3		; 9F66	DEC L		HL points to (+$05)
 	MOVB	#200, (R3)	; 9F67	LD (HL),$80	
 	MOV	#L8F15, R3	; 9F69	LD HL,$8F15	
 	BISB	#10, (R3)	; 9F6C	SET 3,(HL)	
@@ -2560,7 +2563,7 @@ L9F54:	MOV	R2, R3		; 9F54	EX DE,HL	HL points to (+$02)
 L9F76:				; 9F76	LD DE,$0008	
 	ADD	#8., R3		; 9F79	ADD HL,DE	HL points to next record
 	JMP	L9D73		; 9F7A	JP $9D73	continue
-;
+; Cont.point
 L9F7D:	MOV	R2, R3		; 9F7D	EX DE,HL	HL points to (+$02)
 				; 9F7E	LD A,$06	
 	ADD	#6, R3		; 9F80	ADD A,L		HL points to (+$08)
@@ -2571,7 +2574,7 @@ L9F7D:	MOV	R2, R3		; 9F7D	EX DE,HL	HL points to (+$02)
 	DEC	R3		; 9F8B	DEC L	
 	DEC	R3		; 9F8C	DEC L		HL points to (+$06)
 	MOV	#140, R1	; 9F8D	LD C,$60	
-	BITB	#20, (R3)	; 9F8F	BIT 4,(HL)	alter характер движения
+	BITB	#20, (R3)	; 9F8F	BIT 4,(HL)	alter movement pattern
 	BEQ	L9F95		; 9F91	JR Z,$9F95	
 	MOV	#356, R1	; 9F93	LD C,$EE	
 L9F95:	DEC	R3		; 9F95	DEC L		HL points to (+$05)
@@ -2580,88 +2583,87 @@ L9F95:	DEC	R3		; 9F95	DEC L		HL points to (+$05)
 	MOVB	R0, (R3)	; 9F99	LD (HL),A	
 	CMPB	R0, R1		; 9F9A	CP C	
 	BHIS	L9FA6		; 9F9B	JP NC,$9FA6	
-	MOV	#L8F15, R3	; 9F9E	LD HL,$8F15	
-	BISB	#200, (R3)	; 9FA1	SET 7,(HL)	
+				; 9F9E	LD HL,$8F15	
+	BISB	#200, L8F15	; 9FA1	SET 7,(HL)	
 	JMP	L9E1A		; 9FA3	JP $9E1A	next record by IX
 L9FA6:	MOVB	#200, (R3)	; 9FA6	LD (HL),$80	
-	INC	R3		; 9FA8	INC L	
-	INC	R3		; 9FA9	INC L	
-	INC	R3		; 9FAA	INC L		HL points to (+$08)
-	MOVB	#200, (R3)	; 9FAB	LD (HL),$80	set movement flags
-	MOV	#L8F15, R3	; 9FAD	LD HL,$8F15	
-	BISB	#200, (R3)	; 9FB0	SET 7,(HL)	
+				; 9FA8	INC L	
+				; 9FA9	INC L	
+				; 9FAA	INC L		HL points to (+$08)
+	MOVB	#200, 3(R3)	; 9FAB	LD (HL),$80	set movement flags
+				; 9FAD	LD HL,$8F15	
+	BISB	#200, L8F15	; 9FB0	SET 7,(HL)	
 	JMP	L9E1A		; 9FB2	JP $9E1A	next record by IX
-;
-L9FB5:	MOVB	6(R4), R0	; 9FB5	LD A,(IX+$06)	характер движения
+; Cont.point
+L9FB5:	MOVB	6(R4), R0	; 9FB5	LD A,(IX+$06)	get movement pattern
 	CMPB	R0, #5		; 9FB8	CP $05	
 	BEQ	L9FC1		; 9FBA	JP Z,$9FC1	
 	MOVB	#376, (R4)	; 9FBD	LD (IX+$00),$FE	 mark IX record as empty
 L9FC1:	MOV	R2, R3		; 9FC1	EX DE,HL	HL points to (+$02)
-	INC	R3		; 9FC2	INC L	
-	INC	R3		; 9FC3	INC L	
-	INC	R3		; 9FC4	INC L		HL points to (+$05)
+				; 9FC2	INC L	
+				; 9FC3	INC L	
+	ADD	#3, R3		; 9FC4	INC L		HL points to (+$05)
 	MOVB	(R3), R0	; 9FC5	LD A,(HL)	
 	CMPB	R0, #200	; 9FC6	CP $80	
 	BLO	L9FD0		; 9FC8	JR C,$9FD0	
-	DEC	R3		; 9FCA	DEC L	
-	DEC	R3		; 9FCB	DEC L	
-	DEC	R3		; 9FCC	DEC L		HL points to (+$02)
+				; 9FCA	DEC L	
+				; 9FCB	DEC L	
+	SUB	#3, R3		; 9FCC	DEC L		HL points to (+$02)
 	JMP	L9E45		; 9FCD	JP $9E45	next record by HL
 L9FD0:	MOVB	#200, (R3)	; 9FD0	LD (HL),$80	
-	INC	R3		; 9FD2	INC L	
-	INC	R3		; 9FD3	INC L	
-	INC	R3		; 9FD4	INC L		HL points to (+$08)
+				; 9FD2	INC L	
+				; 9FD3	INC L	
+	ADD	#3, R3		; 9FD4	INC L		HL points to (+$08)
 	BISB	#200, (R3)	; 9FD5	SET 7,(HL)	alter movement flags
-	MOV	#L8F15, R3	; 9FD7	LD HL,$8F15	
-	BISB	#100, (R3)	; 9FDA	SET 6,(HL)	
+				; 9FD7	LD HL,$8F15	
+	BISB	#100, L8F15	; 9FDA	SET 6,(HL)	
 	JMP	L9E1A		; 9FDC	JP $9E1A	next record by IX
-;
+; Cont.point
 L9FDF:	MOV	R2, R3		; 9FDF	EX DE,HL	HL points to (+$02)
 	MOVB	12(R4), R0	; 9FE0	LD A,(IX+$0A)	get sprite index
 	CMPB	R0, #14.	; 9FE3	CP $0E		is it Vorton?
 	BNE	L9FE8		; 9FE5	JP Z,$9E45	yes => next record by HL
 	JMP	L9E45
-; IX is not a Vorton record
+; IX is not Vorton record
 L9FE8:	DEC	R3		; 9FE8	DEC L	
 	DEC	R3		; 9FE9	DEC L		HL points to (+$00)
 	MOVB	#376, (R3)	; 9FEA	LD (HL),$FE	mark HL record as empty
 	JMP	L9D7B		; 9FEC	JP $9D7B	next record by HL
-;
-
+; Cont.point
 L9FEF:	MOV	R2, R3		; 9FEF	EX DE,HL	HL points to (+$02)
 				; 9FF0	LD A,$08	
-	ADD	#8., R3		; 9FF2	ADD A,L		HL points to (+$0A)
-				; 9FF3	LD L,A	
-	MOVB	(R3), R0	; 9FF4	LD A,(HL)	
-	CMPB	R0, #14.	; 9FF5	CP $0E	
-	BNE	LA001		; 9FF7	JP NZ,$A001	
+	ADD	#8., R3		; 9FF2	ADD A,L	
+				; 9FF3	LD L,A		HL points to (+$0A)
+	MOVB	(R3), R0	; 9FF4	LD A,(HL)	get sprite index
+	CMPB	R0, #14.	; 9FF5	CP $0E		is it Vorton?
+	BNE	LA001		; 9FF7	JP NZ,$A001	no => jump
 				; 9FFA	LD DE,$0006	
 	ADD	#6, R3		; 9FFD	ADD HL,DE	HL points to next record
 	JMP	L9D73		; 9FFE	JP $9D73	continue
-LA001:
-	MOVB	#376, (R4)	; A001	LD (IX+$00),$FE	 mark IX record as empty
+; HL is not Vorton record
+LA001:	MOVB	#376, (R4)	; A001	LD (IX+$00),$FE	 mark IX record as empty
 	JMP	L9E1A		; A005	JP $9E1A	next record by IX
 ;
 LA008:	CALL	LA270		; A008	CALL $A270	Get next random number
-	MOV	R3, R0		; A00B	LD A,L		повернуться в случайном направлении
-	BIC	#177771, R0	; A00C	AND $06		одно из 4-х направлений
+	MOV	R3, R0		; A00B	LD A,L		rotate to random direction
+	BIC	#177771, R0	; A00C	AND $06		one of four directions
 	MOVB	R0, 7(R4)	; A00E	LD (IX+$07),A	set direction
 	JMP	L9E1A		; A011	JP $9E1A	
-;
+; Cont.point: rotate to random direction
 LA014:	CALL	LA270		; A014	CALL $A270	Get next random number
-	MOV	R3, R0		; A017	LD A,L		повернуться в случайном направлении
+	MOV	R3, R0		; A017	LD A,L		rotate to random direction
 	BIC	#177770, R0	; A018	AND $07		value 0..7
 	MOVB	R0, 7(R4)	; A01A	LD (IX+$07),A	set direction
 	JMP	L9E1A		; A01D	JP $9E1A	next record by IX
-;
+; Cont.point
 LA020:	CALL	LA270		; A020	CALL $A270	Get next random number
 	MOV	R3, R0		; A023	LD A,L	
 	ADD	#7, R0		; A024	AND $07		value 0..7
 	MOVB	R0, 14(R4)	; A026	LD (IX+$0C),A	
-	JMP	L9DC8		; A029	JP $9DC8
-;
+	JMP	L9DC8		; A029	JP $9DC8	Random movement with limitations
+; Cont.point: 180 degree rotation
 LA02C:	MOVB	7(R4), R0	; A02C	LD A,(IX+$07)	get direction
-	ADD	#4, R0		; A02F	ADD A,$04	разворот на 180 градусов
+	ADD	#4, R0		; A02F	ADD A,$04	180 degree rotation
 	BIC	#177410, R0	; A031	RES 3,A	
 	MOVB	R0, 7(R4)	; A033	LD (IX+$07),A	set direction
 	JMP	L9E1A		; A036	JP $9E1A	next record by IX
@@ -2689,47 +2691,46 @@ LA119:	MOV	#12345, R0	; A119	EX AF,AF'	restore AF
 ; Routine: Objects logic
 ; Used by the routines at A03B and A34D.
 LA11B:
-	MOV	L8F01, R2	; A11B	LD DE,($8F01)	адрес таблицы объектов
-	ADD	#8., R2		; A11F	LD A,$08	movement flags
+	MOV	L8F01, R2	; A11B	LD DE,($8F01)	object table address
+	ADD	#8., R2		; A11F	LD A,$08	to movement flags
 				; A121	ADD A,E	
-				; A122	LD E,A	
-	MOVB	(R2), R0	; A123	LD A,(DE)	
+				; A122	LD E,A		DE points to (+$08)
+	MOVB	(R2), R0	; A123	LD A,(DE)	get movement flags
 				; A124	BIT 7,A	
 	BPL	1$
 	JMP	LA1F8		; A126	JP NZ,$A1F8	no action required
-; Applying the action
-1$:	MOVB	L8F14, R0	; A129	LD A,($8F14)	get the current action
-	BIC	#177400, R0
-	MOV	R0, R1		; A12C	LD B,A	
+; Applying the action; movement flags bit 7 = 0
+1$:	MOVB	L8F14, R1	; A129	LD A,($8F14)	get the current action
+	BIC	#177400, R1	; A12C	LD B,A	
 	CLR	R0		; A12D	XOR A	
-	MOV	#L8F1D, R3	; A12E	LD HL,$8F1D	
+	MOV	#L8F1D, R3	; A12E	LD HL,$8F1D	HL = $8F1D
 	ASRB	(R3)		; A131	SRL (HL)	
 	BNE	LA155		; A133	JP NZ,$A155	
 	BITB	R1, #4		; A136	BIT 2,B
 	BEQ	LA144		; A138	JR Z,$A144
-	MOVB	(R2), R0	; A13A	LD A,(DE)	
+	MOVB	(R2), R0	; A13A	LD A,(DE)	get movement flags
 	DECB	R0		; A13B	DEC A	
 	CMPB	R0, #3		; A13C	CP $03	
 	BHIS	LA155		; A13E	JR NC,$A155	
-	MOVB	R0, (R2)	; A140	LD (DE),A	
+	MOVB	R0, (R2)	; A140	LD (DE),A	set movement flags
 	BR	LA14F		; A141	JP $A14F	
 LA144:	BITB	R1, #2		; A144	BIT 1,B	
 	BEQ	LA155		; A146	JR Z,$A155	
-	MOVB	(R2), R0	; A148	LD A,(DE)	
+	MOVB	(R2), R0	; A148	LD A,(DE)	get movement flags
 	INC	R0		; A149	INC A	
 	CMPB	R0, #3		; A14A	CP $03	
 	BHIS	LA155		; A14C	JR NC,$A155	
-	MOVB	R0, (R2)	; A14E	LD (DE),A	
+	MOVB	R0, (R2)	; A14E	LD (DE),A	set movement flags
 LA14F:	CMPB	R0, #1		; A14F	CP $01	
 	BNE	LA155		; A151	JR NZ,$A155	
 	MOVB	#377, (R3)	; A153	LD (HL),$FF	
-LA155:	INC	R3		; A155	INC HL	
-	DEC	R2		; A156	DEC E		теперь DE указывает на direction
+LA155:	INC	R3		; A155	INC HL		HL = $8F1E
+	DEC	R2		; A156	DEC E		DE points to (+$07)
 	ASRB	(R3)		; A157	SRL (HL)	
 	BNE	LA170		; A159	JP NZ,$A170	
 	MOVB	#2, (R3)	; A15C	LD (HL),$02	
-	BITB	R1, #10		; A15E	BIT 3,B	
-	BEQ	LA167		; A160	JR Z,$A167	
+	BITB	R1, #10		; A15E	BIT 3,B		rotation right or left?
+	BEQ	LA167		; A160	JR Z,$A167	left => jump
 	MOVB	(R2), R0	; A162	LD A,(DE)	get current direction
 	INC	R0		; A163	INC A		rotate right
 	BICB	#10, R0		; A164	RES 3,A	
@@ -2740,9 +2741,10 @@ LA167:	BITB	R1, #20		; A167	BIT 4,B
 	DEC	R0		; A16C	DEC A		rotate left
 	BIC	#177770, R0	; A16D	AND $07	        0..7
 	MOVB	R0, (R2)	; A16F	LD (DE),A	save new direction
-LA170:	MOV	R3, R2		; A170	EX DE,HL	
+;
+LA170:	MOV	R3, R2		; A170	EX DE,HL	DE = $8F1E
 	MOV	#L8A60, R3	; A171	LD HL,$8A60	таблица объектов, запись #6
-	INC	R2		; A174	INC DE	
+	INC	R2		; A174	INC DE		DE = $8F1F
 	MOVB	(R2), R0	; A175	LD A,(DE)	
 	CMPB	R0, #2		; A176	CP $02	
 	BNE	1$	
@@ -2753,7 +2755,7 @@ LA170:	MOV	R3, R2		; A170	EX DE,HL
 	INC	R0		; A180	INC A	
 LA181:	DEC	R0		; A181	DEC A	
 	MOVB	R0, (R2)+	; A182	LD (DE),A	
-				; A183	INC DE	
+				; A183	INC DE		DE = $8F20
 				; A184	LD BC,$0010	
 	ADD	#16., R3	; A187	ADD HL,BC	next record
 	MOVB	(R2), R0	; A188	LD A,(DE)	
@@ -2765,8 +2767,8 @@ LA181:	DEC	R0		; A181	DEC A
 	MOVB	#376, (R3)	; A191	LD (HL),$FE	mark the record to skip
 	INC	R0		; A193	INC A	
 LA194:	DEC	R0		; A194	DEC A	
-	MOVB	R0, (R2)	; A195	LD (DE),A	
-	INC	R2		; A196	INC DE	
+	MOVB	R0, (R2)+	; A195	LD (DE),A	
+				; A196	INC DE		DE = $8F21
 				; A197	LD BC,$0010	
 	ADD	#16., R3	; A19A	ADD HL,BC	next record
 	MOVB	(R2), R0	; A19B	LD A,(DE)	
@@ -2779,31 +2781,31 @@ LA194:	DEC	R0		; A194	DEC A
 	INC	R0		; A1A6	INC A	
 LA1A7:	DEC	R0		; A1A7	DEC A	
 	MOVB	R0, (R2)	; A1A8	LD (DE),A	
-	MOV	R3, R5		; A1A9	EX DE,HL	
+	MOV	R3, R5		; A1A9	EX DE,HL	HL = $8F21
 	MOV	R2, R3
 	MOV	R5, R2
-	INC	R3		; A1AA	INC HL	
+	INC	R3		; A1AA	INC HL		HL = $8F22
 	ASR	(R3)		; A1AB	SRL (HL)	
 	BNE	LA1F8		; A1AD	JP NZ,$A1F8	
 	MOVB	L8F14, R0	; A1B0	LD A,($8F14)	get the current action
-	BIT	R0, #1		; A1B3	BIT 0,A	
+	BIT	R0, #1		; A1B3	BIT 0,A		
 	BEQ	LA1F8		; A1B5	JP Z,$A1F8
 ; Current action bit 0 = 1	
-	DEC	R3		; A1B8	DEC HL	
-	MOV	R3, R5		; A1B9	EX DE,HL	
+	DEC	R3		; A1B8	DEC HL		HL = $8F21
+	MOV	R3, R5		; A1B9	EX DE,HL	DE = $8F21
 	MOV	R2, R3
 	MOV	R5, R2
 	MOVB	(R2), R0	; A1BA	LD A,(DE)	
 				; A1BB	AND A	
 	BEQ	LA1CD		; A1BC	JR Z,$A1CD	
-	DEC	R2		; A1BE	DEC DE	
-				; A1BF	LD BC,$FFF0	
+	DEC	R2		; A1BE	DEC DE		DE = $8F20
+				; A1BF	LD BC,$FFF0	-16.
 	SUB	#16., R3	; A1C2	ADD HL,BC	
 	MOVB	(R2), R0	; A1C3	LD A,(DE)	
 				; A1C4	AND A	
 	BEQ	LA1CD		; A1C5	JR Z,$A1CD	
 	SUB	#16., R3	; A1C7	ADD HL,BC	
-	DEC	R2		; A1C8	DEC DE	
+	DEC	R2		; A1C8	DEC DE		DE = $8F1F
 	MOVB	(R2), R0	; A1C9	LD A,(DE)	
 				; A1CA	AND A	
 	BNE	LA1F8		; A1CB	JR NZ,$A1F8	
@@ -2813,19 +2815,19 @@ LA1CD:	PUSH	R2		; A1CD	EX DE,HL
 	MOVB	#22., (R3)	; A1CE	LD (HL),$16	
 				; A1D0	LD HL,$8F22	
 	MOVB	#2, L8F22	; A1D3	LD (HL),$02	
-	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	get the address to copy from
+	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	get object table address
 	MOV	#5, R1		; A1D8	LD BC,$0005	5 bytes
 1$:	MOVB	(R3)+, (R2)+	; A1DB	LDIR		copy
 	SOB	R1, 1$
 	INC	R3		; A1DD	INC L	
-	INC	R3		; A1DE	INC L	
+	INC	R3		; A1DE	INC L		HL points to (+$07)
 	INC	R2		; A1DF	INC E	
-	INC	R2		; A1E0	INC E	
-	MOVB	(R3)+, (R2)+	; A1E1	LDI		copy byte
-	INC	R3		; A1E3	INC L	
-	INC	R2		; A1E4	INC E	
+	INC	R2		; A1E0	INC E		DE  points to (+$07)
+	MOVB	(R3)+, (R2)+	; A1E1	LDI		copy direction byte
+	INC	R3		; A1E3	INC L		HL points to (+$08)
+	INC	R2		; A1E4	INC E		DE points to (+$08)
 				; A1E5	LD A,(HL)	
-	MOVB	(R3), (R2)	; A1E6	LD (DE),A	copy byte
+	MOVB	(R3), (R2)	; A1E6	LD (DE),A	copy movement flags byte
 ;
 	MOVB	L8F18, R0	; A1E7	LD A,($8F18)	
 	BIC	#177400, R0
@@ -2836,13 +2838,13 @@ LA1CD:	PUSH	R2		; A1CD	EX DE,HL
 	MOVB	R0, L8F18	; A1F0	LD ($8F18),A	
 	MOV	#L8F15, R3	; A1F3	LD HL,$8F15	
 	BISB	#2, (R3)	; A1F6	SET 1,(HL)	
-; Current action bit 0 = 0 (also used in DEMO mode)
+; Current action bit 0 = 0, or DEMO mode
 LA1F8:
 	MOV	#L8F0E, R3	; A1F8	LD HL,$8F0E	
-	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	адрес таблицы объектов
-	MOVB	7(R4), R0	; A1FF	LD A,(IX+$07)	direction 0..7
+	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	object table address
+	MOVB	7(R4), R0	; A1FF	LD A,(IX+$07)	get direction 0..7
 	ADD	R0, R0		; A202	ADD A,A	
-	MOVB	R0, (R3)	; A203	LD (HL),A	сохраняем номер спрайта
+	MOVB	R0, (R3)	; A203	LD (HL),A	save sprite number
 	MOV	#LA28F, R3	; A204	LD HL,$A28F	
 	CLR	R0		; A207	XOR A	
 	CMPB	R0, (R3)	; A208	CP (HL)	
@@ -3087,7 +3089,7 @@ LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	BHIS	LA3A8		; A38D	JR NC,$A3A8	=> end of DEMO
 	MOV	#<L8A40+8.>, R3	; A38F	LD HL,$8A48	Object record #4 movement
 	CLRB	(R3)		; A392	LD (HL),$00	stop
-	MOV	L8F01, R3	; A394	LD HL,($8F01)	адрес таблицы объектов
+	MOV	L8F01, R3	; A394	LD HL,($8F01)	object table address
 	MOVB	#376, (R3)+	; A397	LD (HL),$FE	mark the record as empty
 				; A399	INC L		
 	MOVB	(R3)+, R2	; A39A	LD E,(HL)	
@@ -3166,7 +3168,7 @@ LA403:				; A403	LD DE,$5A60	Screen attribute area address
 
 ; Routine: Increment score
 ; BC = score increment value
-LA414:	MOV	#<LA480+6>, R3	; A414	LD HL,$A486	
+LA414:	MOV	#<LA480+6>, R3	; A414	LD HL,$A486	Score
 LA417:	MOVB	(R3), R0	; A417	LD A,(HL)	
 				; A418	CP $00	
 	BNE	LA41E		; A41A	JR NZ,$A41E	
@@ -3181,7 +3183,7 @@ LA428:	MOVB	R0, (R3)	; A428	LD (HL),A
 	SOB	R1, LA414	; A429	DJNZ $A414	
 ; Routine entry point: Show score
 LA42B:	MOV	#141261, R2	; A42B	LD DE,$529D	address on the screen	
-	MOV	#<LA480+6>, R1	; A42E	LD BC,$A486	score	
+	MOV	#<LA480+6>, R1	; A42E	LD BC,$A486	Score
 LA431:	MOVB	(R1), R0	; A431	LD A,(BC)	
 	BIC	#177400, R0
 	CMPB	R0, #377	; A432	CP $FF	
@@ -3215,7 +3217,7 @@ LA444:	MOVB	(R3), R0	; A444	LD A,(HL)
 
 ; Routine: GAME MODE prepare
 LA450:
-	MOV	#<LA480+1>, R3	; A450	LD HL,$A481	
+	MOV	#<LA480+1>, R3	; A450	LD HL,$A481	Score
 	MOV	#<LA480+9.>, R2	; A453	LD DE,$A489	
 	MOV	#7, R1		; A456	LD B,$07	
 LA458:	PUSH	R1		; A458	PUSH BC	
@@ -3283,7 +3285,7 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	CMPB	R0, #376	; A552	CP $FE	
 	BEQ	LA5DA		; A554	JP Z,$A5DA	
 	BHIS	LA5E2		; A557	JP NC,$A5E2	
-	MOVB	6(R4), R0	; A55A	LD A,(IX+$06)	характер движения
+	MOVB	6(R4), R0	; A55A	LD A,(IX+$06)	get movement pattern
 	BIC	#177400, R0
 	CMPB	R0, #22.	; A55D	CP $16	
 	BNE	LA5DA		; A55F	JP NZ,$A5DA	
@@ -3297,7 +3299,7 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	BIT	#177400, R3	; A56F	LD A,H	
 				; A570	AND A	
 	BNE	LA5DA		; A571	JP NZ,$A5DA	
-	MOVB	11(R4), R1	; A574	LD A,(IX+$09)	берём горизонтальное смещение (только биты 2-3)
+	MOVB	11(R4), R1	; A574	LD A,(IX+$09)	get horz offset (bits 2-3 only)
 	BIC	#177763, R1
 	ASR	R1		; A577	ADD A,A	
 	ADD	#L9915, R1	; A578	LD C,A	
@@ -3312,13 +3314,13 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	MOV	L8F03, R2	; A586	LD HL,($8F03)	
 	ADD	R1, R2		; A589	ADD HL,BC	
 	MOV	R2, R1		; A58A	LD C,L	
-				; A58B	LD B,H		BC = адрес куда рисовать спрайт
+				; A58B	LD B,H		BC = address where to draw the sprite
 	PUSH	R2		; A58C	PUSH HL	
 				; A58D	EX DE,HL	
 	MOV	#LBBC0, R2	; A58E	LD DE,$BBC0	Sprite #5 -- площадка-препятствие
 	CALL	(R3)		; A591	JP (HL)	
 ;
-;NOTE: Блок кода A592-A5AС заменён на таблицу L9915
+;NOTE: Code block A592-A5AС replaced to table L9915
 ;
 LA5AD:	POP	R3		; A5AD	POP HL	
 				; A5AE	LD A,H	
@@ -3412,7 +3414,7 @@ LA638:				; A638	LD DE,$0010	|
 	CLR	R0		; A645	XOR A		action = none
 	CALL	LA34D		; A646	CALL $A34D	do the action
 	MOV	#L8A50, R3	; A649	LD HL,$8A50	Lasertron
-	MOV	R3, L8F01	; A64C	LD ($8F01),HL	
+	MOV	R3, L8F01	; A64C	LD ($8F01),HL	object table address
 	MOV	#15., R1	; A64F	LD B,$0F	loop counter = 15.
 	CLR	R0		; A651	XOR A		action = none
 	CALL	LA34D		; A652	CALL $A34D	do the action
@@ -3643,66 +3645,66 @@ LB3A9:
 	MOV	#18., R0		; Количество верхних пустых строк
 10$:	MOV	#8., R1			; Счётчик по строке
 11$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	SOB	R1, 11$
-	ADD	#<80.-32.>, R2		; К следующей строке
+	ADD	#<80.-32.>, R2		; to next line
 	SOB	R0, 10$
 
-	MOV	#<LDBC0+576.>, R3
-	MOV	#<192.-18.-19.>, R0	; Количество копируемых строк
+	MOV	#<LDBC0+576.>, R3	; Copy from
+	MOV	#<192.-18.-19.>, R0	; Number of lines to copy
 1$:	PUSH	R0
 	MOV	#8., R1			; Счётчик по строке
 2$:	MOVB	(R3)+, R0		; берём байт
 	BIC    	#177400, R0		; оставляем младший байт
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	R0, (R5)		; Пишем в экран
+	MOV	R0, (R5)		; Write into the screen
 	INC	R2
 	MOVB	(R3)+, R0		; берём байт
 	BIC    	#177400, R0		; оставляем младший байт
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	R0, (R5)		; Пишем в экран
+	MOV	R0, (R5)		; Write into the screen
 	INC	R2
 	MOVB	(R3)+, R0		; берём байт
 	BIC    	#177400, R0		; оставляем младший байт
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	R0, (R5)		; Пишем в экран
+	MOV	R0, (R5)		; Write into the screen
 	INC	R2
 	MOVB	(R3)+, R0		; берём байт
 	BIC    	#177400, R0		; оставляем младший байт
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	R0, (R5)		; Пишем в экран
+	MOV	R0, (R5)		; Write into the screen
 	INC	R2
 	SOB	R1, 2$
-	ADD	#<80.-32.>, R2		; К следующей строке
+	ADD	#<80.-32.>, R2		; to next line
 	POP	R0
-	SOB	R0, 1$			; продолжаем цикл по строкам
+	SOB	R0, 1$			; continue loop by lines
 
-	MOV	#19., R0		; Количество нижних пустых строк
+	MOV	#4., R0		; Количество нижних пустых строк
 30$:	MOV	#8., R1			; Счётчик по строке
 31$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Пишем в экран
+	CLR	(R5)			; Write into the screen
 	INC	R2
 	SOB	R1, 31$
-	ADD	#<80.-32.>, R2		; К следующей строке
+	ADD	#<80.-32.>, R2		; to next line
 	SOB	R0, 30$
 
 	RETURN
@@ -3738,7 +3740,7 @@ LB40D:	BISB	#1, (R3)	; B40D	LD A,(HL)
 	POP	R3		; B419	POP HL	
 	RETURN			; B41A	RET	
 
-; Routine
+; Routine: Draw title with keyboard check
 ; Used by the routine at B3D8
 LB41B:
 		; B41B	EX AF,AF'	
@@ -3750,7 +3752,7 @@ LB41B:
 		; B424	EX AF,AF'	
 		; B425	RET	
 		; B426	EX AF,AF'
-; This entry point is used by the routine at B3D8
+; This entry point: Draw title without keyboard check
 ; A = 0 / 8. / 16. / 24.
 LB427:
 	PUSH	R3		; B427	PUSH HL	
@@ -3775,7 +3777,7 @@ LB433:	PUSH	R2		; B433	PUSH DE		save loop counter
 	MOV	LB4CD, R2	; B441	LD DE,($B4CD)	Get mask and sprite address
 	CALL	(R3)		; B445	JP (HL)		Draw the sprite
 ;
-;NOTE: Блок кода B446-B460 заменён на таблицу LB446
+;NOTE: Code block B446-B460 replaced with table LB446
 ;
 LB461:	POP	R1		; B461	POP BC	
 	POP	R0		; B462	POP AF	
