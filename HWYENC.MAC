@@ -635,7 +635,7 @@ L911F:		; 911F	LD A,$BF
 
 L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
 	CALL	LA03B		; 9166	CALL $A03B	Objects logic
-	CALL	L9C7B		; 9169	CALL $9C7B	Process movements?
+	CALL	L9C7B		; 9169	CALL $9C7B	Process object movement
 	CALL	L985A		; 916C	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
 	CALL	L9A9B		; 916F	CALL $9A9B	Draw the shadow screen on the real screen
 	MOVB	L8F00, R0	; 9172	LD A,($8F00)	Zone number
@@ -2119,14 +2119,14 @@ L9BFC:	.WORD	012, <LFD00-1027>, 133775, <LFD00+553.>	; 0A FAE9 5729 FF29  line 1
 	.WORD	017, <LE900+377>,  106623, <LFF29-1012>	; 0F E9FF 471F FD1F  line 1
 	.WORD	000
 
-; Routine: Process movements?
+; Routine: Process object movement
 L9C7B:
 	MOV	L8F01, R4	; 9C7B	LD IX,($8F01)	адрес таблицы объектов
 	MOVB	(R4), R0	; 9C7F	LD A,(IX+$00)	
 	BIC	#177400, R0
-	CMPB	R0, #376	; 9C82	CP $FE	
-	BLO	1$		; 9C84	JP NC,$9E1A
-	JMP	L9E1A		;			skip the record
+	CMPB	R0, #376	; 9C82	CP $FE		skip?
+	BLO	1$		; 9C84	JP NC,$9E1A	no => jump
+	JMP	L9E1A		;			next record by IX
 1$:	MOVB	10(R4), R0	; 9C87	LD A,(IX+$08)	movement flags
 	BIC	#177400, R0
 	BITB	R0, #128.	; 9C8A	BIT 7,A	
@@ -2160,12 +2160,12 @@ L9CB9:	CALL	L92CE		; 9CB9	CALL $92CE	Prepare objects
 L9CC3:	MOVB	10(R4), R0	; 9CC3	LD A,(IX+$08)	get movement flags
 	BIC	#177400, R0	; 9CC6	AND A	        stopped?
 	BNE	L9D29		; 9CC7	JP NZ,$9D29	no => jump
-	JMP	L9E1A		; 9CCA	JP $9E1A	next record
+	JMP	L9E1A		; 9CCA	JP $9E1A	next record by IX
 ; Process the record
 L9CCD:	MOVB	10(R4), R0	; 9CCD	LD A,(IX+$08)	movement flags
 	BIC	#177500, R0	; 9CD0	RES 6,A	
 				; 9CD2	AND A	
-	BNE	1$		; 9CD3	JP Z,$9E1A	
+	BNE	1$		; 9CD3	JP Z,$9E1A	=> next record by IX
 	JMP	L9E1A
 1$:	BITB	#200, R0	; 9CD6	BIT 7,A	
 	BEQ	L9D29		; 9CD8	JP Z,$9D29	
@@ -2176,9 +2176,9 @@ L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	фаза спрайта?
 	BLO	L9CEF		; 9CE2	JR C,$9CEF	
 	MOVB	#376, (R4)	; 9CE4	LD (IX+$00),$FE	 mark the record as empty
 	BICB	#200, 10(R4)	; 9CE8	RES 7,(IX+$08)	
-	JMP	L9E1A		; 9CEC	JP $9E1A	next record
+	JMP	L9E1A		; 9CEC	JP $9E1A	next record by IX
 L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A	
-	MOV	L8F15, R3	; 9CF2	LD HL,$8F15	
+	MOV	#L8F15, R3	; 9CF2	LD HL,$8F15	
 	MOVB	6(R4), R0	; 9CF5	LD A,(IX+$06)	характер движения
 	BIC	#177420, R0	; 9CF8	RES 4,A	
 				; 9CFA	AND A	
@@ -2186,9 +2186,9 @@ L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A
 	CMPB	R0, #7		; 9CFD	CP $07	
 	BLO	L9D06		; 9CFF	JR C,$9D06	
 	BISB	#200, (R3)	; 9D01	SET 7,(HL)	
-L9D03:	JMP	L9E1A		; 9D03	JP $9E1A	next record
+L9D03:	JMP	L9E1A		; 9D03	JP $9E1A	next record by IX
 L9D06:	BISB	#8., (R3)	; 9D06	SET 3,(HL)	
-	JMP	L9E1A		; 9D08	JP $9E1A        next record
+	JMP	L9E1A		; 9D08	JP $9E1A        next record by IX
 L9D0B:	BISB	#64., (R3)	; 9D0B	SET 6,(HL)	
 		; 9D0D	LD HL,$5A86	??? attributes?
 		; 9D10	LD A,IXl	
@@ -2205,33 +2205,34 @@ L9D0B:	BISB	#64., (R3)	; 9D0B	SET 6,(HL)
 		; 9D22	LD (HL),A	
 		; 9D23	ADD HL,DE	
 		; 9D24	DJNZ $9D20	
-	JMP	L9E1A		; 9D26	JP $9E1A	next record
+	JMP	L9E1A		; 9D26	JP $9E1A	next record by IX
 ; Process movement; A = (IX+$08), A != 0
 L9D29:	DEC	R0		; 9D29	DEC A	
 	SWAB	R0
 	ASR	R0		; 9D2A	RRCA	
-	ASR	R0		; 9D2B	RRCA		биты 6-7
+	ASR	R0		; 9D2B	RRCA		bits 6-7
+	BIC	#177477, R0
 	MOV	R0, R3		; 9D2C	LD L,A	
 	MOVB	7(R4), R0	; 9D2D	LD A,(IX+$07)	movement direction 0..7
 	BIC	#177400, R0
 	ADD	R0, R0		; 9D30	ADD A,A		(IX+$07)*2
 	ADD	R0, R0		; 9D31	ADD A,A	        (IX+$07)*4
 	ADD	R0, R0		; 9D32	ADD A,A		(IX+$07)*8 -- bits 3-5
-	ADD	R0, R3		; 9D33	ADD A,L		(IX+$07)*8+L -- bits 3-5 и 6-7
+	ADD	R0, R3		; 9D33	ADD A,L		(IX+$07)*8+L -- bits 3-5 and 6-7
 				; 9D34	LD L,A	
 	ADD	#L8E00, R3	; 9D35	LD H,$8E	8E00 table address
 	MOVB	(R3)+, R0	; 9D37	LD A,(HL)	get value from the table
 	BIC	#177400, R0
 	MOVB	(R4), R5	; 9D38	ADD A,(IX+$00)	
-	BIC	#177400, R5
 	ADD	R5, R0
+	BIC	#177400, R0
 				; 9D3B	INC L	
 	MOVB	(R3)+, R2	; 9D3C	LD E,(HL)	
 	BIC	#177400, R2	; 9D3D	INC L	
 	SWAB	R2
-	BISB	(R3), R2	; 9D3E	LD D,(HL)	
+	BISB	(R3), R2	; 9D3E	LD D,(HL)	DE = ??
 	SWAB	R2
-	MOV	R3, LA039	; 9D3F	LD ($A039),HL	
+	MOV	R3, LA039	; 9D3F	LD ($A039),HL	save HL
 	MOVB	2(R4), R3	; 9D42	LD L,(IX+$01)	
 	BIC	#177400, R3
 	SWAB	R3
@@ -2242,7 +2243,7 @@ L9D29:	DEC	R0		; 9D29	DEC A
 	MOV	#14., R0	; 9D4E	LD A,$0E	
 	JMP	L9E62		; 9D50	JP $9E62	
 L9D53:	SUB	#7, R0		; 9D53	SUB $07	
-	MOV	R0, R5		; 9D55	LD IYl,A	
+	MOV	R0, R5		; 9D55	LD IYl,A	save A
 	MOV	L8F05, R2	; 9D57	LD DE,($8F05)	
 				; 9D5B	AND A	
 	SUB	R2, R3		; 9D5C	SBC HL,DE	
@@ -2257,16 +2258,17 @@ L9D69:	ADD	R2, R3		; 9D69	ADD HL,DE
 	MOV	R3, R1		; 9D6E	LD B,H	
 				; 9D6F	LD C,L	
 	MOV	L8F01, R3	; 9D70	LD HL,($8F01)	адрес таблицы объектов
+; Process next object record pointed by HL
 L9D73:	MOVB	(R3), R0	; 9D73	LD A,(HL)	
 	BIC	#177400, R0
-	CMPB	R0, #376	; 9D74	CP $FE	
-	BHIS	1$		; 9D76	JP C,$9E2B	
+	CMPB	R0, #376	; 9D74	CP $FE		empty record?
+	BHIS	1$		; 9D76	JP C,$9E2B	no => jump
 	JMP	L9E2B
-1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	
+1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	end of table => jump
 L9D7B:				; 9D7B	LD DE,$0010	
-	ADD	#16., R3	; 9D7E	ADD HL,DE	next record	
-	BR	L9D73		; 9D7F	JP $9D73	
-L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	
+	ADD	#16., R3	; 9D7E	ADD HL,DE	HL points to next record
+	BR	L9D73		; 9D7F	JP $9D73	continue by HL
+L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	#7, R0		; 9D84	ADD A,$07	
 	MOVB	R0, (R4)	; 9D86	LD (IX+$00),A	
 	MOV	#7, R3		; 9D89	LD HL,$0007	
@@ -2274,14 +2276,13 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl
 	MOVB	R3, 1(R4)	; 9D8D	LD (IX+$01),L	
 	SWAB	R3
 	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	
-	MOV	LA039, R3	; 9D93	LD HL,($A039)
+	MOV	LA039, R3	; 9D93	LD HL,($A039)	restore HL
 	INC	R3		; 9D96	INC L	
 	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	
-	BIC	#177400, R0
-				; 9D98	INC L	
+	BIC	#177400, R0	; 9D98	INC L	
 	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	добавляем горизонтальное смещение (bits 2-3 only)
-	BIC	#177400, R5
 	ADD	R5, R0
+	BIC	#177400, R0
 	CMPB	R0, #13.	; 9D9C	CP $0D	
 	BLO	L9DAD		; 9D9E	JR C,$9DAD	
 	CMPB	R0, #128.	; 9DA0	CP $80	
@@ -2327,7 +2328,7 @@ L9DC8:	CALL	LA270		; 9DC8	CALL $A270	get next random number
 	INC	R3		; 9DD8	INC HL	
 	BISB	(R3), R0	; 9DD9	OR (HL)	
 	MOVB	R0, 7(R4)	; 9DDA	LD (IX+$07),A	set new direction
-	BR	L9E1A		; 9DDD	JP $9E1A	
+	BR	L9E1A		; 9DDD	JP $9E1A	next record by IX
 L9DE0:	BIC	#16., R0	; 9DE0	RES 4,A	
 	CMPB	R0, #3		; 9DE2	CP $03	
 	BNE	L9E0D		; 9DE4	JP NZ,$9E0D
@@ -2340,21 +2341,21 @@ L9DE0:	BIC	#16., R0	; 9DE0	RES 4,A
 	DEC	R0		; 9DF3	DEC A		move left
 	BIC	#177770, R0	; 9DF4	AND $07		0..7
 	MOVB	R0, 7(R4)	; 9DF6	LD (IX+$07),A	set the direction
-	BR	L9E1A		; 9DF9	JP $9E1A	
+	BR	L9E1A		; 9DF9	JP $9E1A	next record by IX
 L9DFC:	CMPB	R0, #10.	; 9DFC	CP $0A		x >= 10. ?
 	BHIS	L9E1A		; 9DFE	JP NC,$9E1A	yes => jump
 	MOVB	7(R4), R0	; 9E01	LD A,(IX+$07)	get current direction
 	INC	R0		; 9E04	INC A	        move right
 	BIC	#177770, R0	; 9E05	RES 3,A		0..7
 	MOVB	R0, 7(R4)	; 9E07	LD (IX+$07),A	set the direction
-	BR	L9E1A		; 9E0A	JP $9E1A	
+	BR	L9E1A		; 9E0A	JP $9E1A	next record by IX
 ;
-L9E0D:	CMP	R0, #10.	; 9E0D	CP $0A	
-	BNE	L9E1A		; 9E0F	JP NZ,$9E1A	no => jump, next record
+L9E0D:	CMP	R0, #10.	; 9E0D	CP $0A		= 10. ?
+	BNE	L9E1A		; 9E0F	JP NZ,$9E1A	no => next record by IX
 ; (IX+$06) == $0A or $1A
 L9E12:	BICB	#64., 10(R4)	; 9E12	RES 6,(IX+$08)	
 	ASRB	10(R4)		; 9E16	SRL (IX+$08)
-; Proceed to the next record
+; Proceed to the next record by IX
 L9E1A:				; 9E1A	LD DE,$0010	
 	ADD	#16., R4	; 9E1D	ADD IX,DE	next record
 	MOVB	(R4), R0	; 9E1F	LD A,(IX+$00)	
@@ -2362,51 +2363,52 @@ L9E1A:				; 9E1A	LD DE,$0010
 	CMPB	R0, #376	; 9E22	CP $FE	
 	BHIS	1$		; 9E24	JP C,$9CCD	(IX+$00) < $FE ? => jump
 	JMP	L9CCD
-1$:	BEQ	L9E1A		; 9E27	JP Z,$9E1A	(IX+$00) == $FE ? => next record
+1$:	BEQ	L9E1A		; 9E27	JP Z,$9E1A	(IX+$00) == $FE ? => next record by IX
 	RETURN			; 9E2A	RET		(IX+$00) == $FF => end of table, return
-;
-L9E2B:	SUB	R5, R0		; 9E2B	SUB IYl	
+; HL = non-empty object record to process
+L9E2B:	SUB	R5, R0		; 9E2B	SUB IYl		use stored A
 	CMPB	R0, #15.	; 9E2D	CP $0F	
-	BLO	1$		; 9E2F	JP NC,$9D7B	
+	BLO	1$		; 9E2F	JP NC,$9D7B	=> next record by HL
 	JMP	L9D7B
 1$:	INC	R3		; 9E32	INC L	
 	MOVB	(R3)+, R2	; 9E33	LD E,(HL)	
-	BIC	#177400, R2	; 9E34	INC L	
+	BIC	#177400, R2	; 9E34	INC L		HL points to (+$02)
 	SWAB	R2
-	BISB	(R3), R2	; 9E35	LD D,(HL)	
+	BISB	(R3), R2	; 9E35	LD D,(HL)	DE = ??
 	SWAB	R2
 				; 9E36	EX DE,HL	
 				; 9E37	AND A	
 	SUB	R1, R2		; 9E38	SBC HL,BC	
-				; 9E3A	EX DE,HL	
-	BIT	R2, #177400	; 9E3B	LD A,D	
+				; 9E3A	EX DE,HL	HL points to (+$02)
+				; 9E3B	LD A,D	
 				; 9E3C	AND A	
-	BNE	L9E45		; 9E3D	JR NZ,$9E45
-	MOV	R2, R0		; 9E3F	LD A,E	
-	CMPB	R0, #15.	; 9E40	CP $0F	
+				; 9E3D	JR NZ,$9E45
+				; 9E3F	LD A,E	
+	CMP	R2, #15.	; 9E40	CP $0F	
 	BLO	L9E4C		; 9E42	JP C,$9E4C	
 L9E45:				; 9E45	LD DE,$000E	
-	ADD	#14., R3	; 9E48	ADD HL,DE	
-	JMP	L9D73		; 9E49	JP $9D73	
+	ADD	#14., R3	; 9E48	ADD HL,DE	HL points to next record
+	JMP	L9D73		; 9E49	JP $9D73	continue by HL
 L9E4C:	MOV	R4, R0		; 9E4C	LD A,IXl	
 	INC	R0		; 9E4E	INC A	
 	INC	R0		; 9E4F	INC A	
 	CMP	R0, R3		; 9E50	CP L
-	BEQ	L9E45		; 9E51	JR NZ,$9E58	
+				; 9E51	JR NZ,$9E58	
 				; 9E53	LD A,IXh	
 				; 9E55	CP H	
-				; 9E56	JR Z,$9E45	
-L9E58:	MOV	R3, R2		; 9E58	LD A,$04
-	ADD	#4, R3		; 9E5A	ADD A,L	
-				; 9E5B	EX DE,HL	save HL
+	BEQ	L9E45		; 9E56	JR Z,$9E45	
+	MOV	R3, R2		; 9E58	LD A,$04	
+	ADD	#4, R3		; 9E5A	ADD A,L		
+				; 9E5B	EX DE,HL	DE points to (+$02)
 				; 9E5C	LD L,A	
-				; 9E5D	LD H,D	
-	MOVB	(R3), R0	; 9E5E	LD A,(HL)	
+				; 9E5D	LD H,D		HL points to (+$06)
+	MOVB	(R3), R0	; 9E5E	LD A,(HL)	характер движения
 	BIC	#177420, R0	; 9E5F	RES 4,A	
 	ADD	R0, R0		; 9E61	ADD A,A	
 L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	get continuation point number
 	BIC	#177400, R3
-	ADD	R0, R3		; 9E65	LD L,A	
+	ADD	R0, R3		; 9E65	LD L,A		now L should be 0..240.
+	BIC	#177401, R0
 	ADD	#L9000, R0	; 9E66	LD H,$90	start of continuation points table = $9000
 	MOV	(R0), R3	; 9E68	LD A,(HL)	get the continuation point address
 				; 9E69	INC L	
@@ -2415,249 +2417,254 @@ L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	get continuation point number
 	JMP	(R3)		; 9E6C	JP (HL)		jump to continuation point
 ;
 ; Continuation points, called using $9000 table
+; DE points to (+$02) for loop by HL
 ;
 L9E6D:				; 9E6D	LD A,$04	
-	MOV	R2, R3		; 9E6F	EX DE,HL
+	MOV	R2, R3		; 9E6F	EX DE,HL	HL points to (+$02)
 	ADD	#4, R3		; 9E70	ADD A,L	
-				; 9E71	LD L,A	
-	BITB	#20, (R3)	; 9E72	BIT 4,(HL)	
-	BNE	L9E12		; 9E74	JP NZ,$9E12	
-L9E77:	INC	R3		; 9E77	INC L	
+				; 9E71	LD L,A		HL points to (+$06)
+	BITB	#20, (R3)	; 9E72	BIT 4,(HL)	alter характер движения
+	BNE	L9E12		; 9E74	JP NZ,$9E12	alter IX movement and next by IX
+L9E77:	INC	R3		; 9E77	INC L		HL points to (+$07)
 	MOVB	7(R4), R0	; 9E78	LD A,(IX+$07)	direction
 	DEC	R0		; 9E7B	DEC A	
 	DEC	R0		; 9E7C	DEC A	
 	CMPB	R0, #5		; 9E7D	CP $05	
 	BLO	L9ED7		; 9E7F	JP C,$9ED7	
-	CLRB	(R3)		; 9E82	LD (HL),$00	
-	INC	R3		; 9E84	INC L	
-	MOVB	#1, (R3)	; 9E85	LD (HL),$01	
-	MOVB	#1, 10(R4)	; 9E87	LD (IX+$08),$01	
-	BR	L9E1A		; 9E8B	JP $9E1A	next record
+	CLRB	(R3)+		; 9E82	LD (HL),$00	set direction = forward
+				; 9E84	INC L		HL points to (+$08)
+	MOVB	#1, (R3)	; 9E85	LD (HL),$01	set movement = move
+	MOVB	#1, 10(R4)	; 9E87	LD (IX+$08),$01	 set movement = move
+	BR	L9E1A		; 9E8B	JP $9E1A	next record by IX
+;
 L9E8E:				; 9E8E	LD A,$04	
-	MOV	R2, R3		; 9E90	EX DE,HL	
+	MOV	R2, R3		; 9E90	EX DE,HL	HL points to (+$02)
 	ADD	#4, R3		; 9E91	ADD A,L	
-				; 9E92	LD L,A	
-	MOVB	10(R4), R0	; 9E93	LD A,(IX+$08)	
+				; 9E92	LD L,A		HL points to (+$06)
+	MOVB	10(R4), R0	; 9E93	LD A,(IX+$08)	get movement
 	BITB	#100, R0	; 9E96	BIT 6,A	
 	BNE	L9EA3		; 9E98	JP NZ,$9EA3	
 	CMPB	R0, #2		; 9E9B	CP $02	
-	BLO	L9E1A		; 9E9D	JP C,$9E1A	next record
-	BR	L9E12		; 9EA0	JP $9E12	
+	BLO	L9E1A		; 9E9D	JP C,$9E1A	=> next record by IX
+	BR	L9E12		; 9EA0	JP $9E12	alter IX movement and next by IX
 L9EA3:	BICB	#100, R0	; 9EA3	RES 6,A
-	MOVB	R0, 10(R4)	; 9EA5	LD (IX+$08),A	
-	BITB	#20, (R3)	; 9EA8	BIT 4,(HL)	
+	MOVB	R0, 10(R4)	; 9EA5	LD (IX+$08),A	set movement
+	BITB	#20, (R3)	; 9EA8	BIT 4,(HL)	check характер движения
 	BNE	L9EAE		; 9EAA	JR NZ,$9EAE	
 	ASR	R0		; 9EAC	SRL A	
 L9EAE:	INC	R3		; 9EAE	INC L	
-	INC	R3		; 9EAF	INC L	
+	INC	R3		; 9EAF	INC L		HL points to (+$08)
 	BISB	#100, R0	; 9EB0	SET 6,A	
-	MOVB	R0, (R3)	; 9EB2	LD (HL),A	
-	DEC	R3		; 9EB3	DEC L	
-	MOVB	7(R4), R0	; 9EB4	LD A,(IX+$07)	direction
-	MOVB	R0, (R3)	; 9EB7	LD (HL),A	
-	BR	L9E1A		; 9EB8	JP $9E1A	next record
-L9EBB:	MOVB	#376, (R4)	; 9EBB	LD (IX+$00),$FE	 mark the record as empty
+	MOVB	R0, (R3)	; 9EB2	LD (HL),A	set movement
+	DEC	R3		; 9EB3	DEC L		HL points to (+$07)
+	MOVB	7(R4), R0	; 9EB4	LD A,(IX+$07)	get direction
+	MOVB	R0, (R3)	; 9EB7	LD (HL),A	copy direction
+	BR	L9E1A		; 9EB8	JP $9E1A	next record by IX
+;
+L9EBB:	MOVB	#376, (R4)	; 9EBB	LD (IX+$00),$FE	 mark IX record as empty
 L9EBF:				; 9EBF	LD A,$05	
-	MOV	R2, R3		; 9EC1	EX DE,HL	
+	MOV	R2, R3		; 9EC1	EX DE,HL	HL points to (+$02)
 	ADD	#5, R3		; 9EC2	ADD A,L	
-				; 9EC3	LD L,A	
-	MOVB	7(R4), R0	; 9EC4	LD A,(IX+$07)	direction
-	MOVB	R0, (R3)	; 9EC7	LD (HL),A	
-	MOVB	10(R4), R0	; 9EC8	LD A,(IX+$08)	
-	DEC	R3		; 9ECB	DEC L	
-	BITB	#20, (R3)	; 9ECC	BIT 4,(HL)	
+				; 9EC3	LD L,A		HL points to (+$07)
+	MOVB	7(R4), R0	; 9EC4	LD A,(IX+$07)	get direction
+	MOVB	R0, (R3)	; 9EC7	LD (HL),A	copy direction
+	MOVB	10(R4), R0	; 9EC8	LD A,(IX+$08)	get movement
+	DEC	R3		; 9ECB	DEC L		HL points to (+$06)
+	BITB	#20, (R3)	; 9ECC	BIT 4,(HL)	check характер движения
 	BNE	L9ED2		; 9ECE	JR NZ,$9ED2	
 	ASR	R0		; 9ED0	SRL A	
-L9ED2:	INC	R3		; 9ED2	INC L	
-	INC	R3		; 9ED3	INC L	
+L9ED2:	INC	R3		; 9ED2	INC L		
+	INC	R3		; 9ED3	INC L		HL points to (+$08)
 	BISB	#100, R0	; 9ED4	SET 6,A	
-	MOVB	R0, (R3)	; 9ED6	LD (HL),A
+	MOVB	R0, (R3)	; 9ED6	LD (HL),A	set movement
 ; Точка продолжения 000
 L9ED7:	MOV	#L8F15, R3	; 9ED7	LD HL,$8F15	
 	MOVB	6(R4), R0	; 9EDA	LD A,(IX+$06)	характер движения
 	BIC	#177400, R0	; 9EDD	AND A	
 	BEQ	L9EEA		; 9EDE	JR Z,$9EEA	
 	CMPB	R0, #1		; 9EE0	CP $01	
-	BNE	L9EE7		; 9EE2	JP NZ,$9E1A	
+	BNE	L9EE7		; 9EE2	JP NZ,$9E1A	no => next record by IX
 	BISB	#20, (R3)	; 9EE5	SET 4,(HL)	
-L9EE7:	JMP	L9E1A		; 9EE7	JP $9E1A	next record
+L9EE7:	JMP	L9E1A		; 9EE7	JP $9E1A	next record by IX
 L9EEA:	MOVB	L8F1D, R0	; 9EEA	LD A,($8F1D)	
 	ROLB	R0		; 9EED	RLA	
 	BLO	L9EF2		; 9EEE	JR C,$9EF2	
 	BISB	#20, (R3)	; 9EF0	SET 4,(HL)	
 L9EF2:	CLR	R0		; 9EF2	XOR A	
-	ASRB	10(R4)		; 9EF3	SRL (IX+$08)	
+	ASRB	10(R4)		; 9EF3	SRL (IX+$08)	alter movement
 	BEQ	L9EFC		; 9EF7	JP Z,$9EFC	
 	MOVB	#4, R0		; 9EFA	LD A,$04	
 L9EFC:	MOVB	R0, L8F1D	; 9EFC	LD ($8F1D),A	
-	JMP	L9E1A		; 9EFF	JP $9E1A	next record
-L9F02:
-	MOV	R2, R3		; 9F02	EX DE,HL	
+	JMP	L9E1A		; 9EFF	JP $9E1A	next record by IX
+;
+L9F02:	MOV	R2, R3		; 9F02	EX DE,HL	HL points to (+$02)
 	JMP	L9E45		; 9F03	JP $9E45
-L9F06:
-	MOV	R2, R3		; 9F06	EX DE,HL	
+;
+L9F06:	MOV	R2, R3		; 9F06	EX DE,HL	HL points to (+$02)
 	DEC	R3		; 9F07	DEC L	
-	DEC	R3		; 9F08	DEC L	
-	MOVB	#376, (R3)	; 9F09	LD (HL),$FE	delete the object
-	BISB	#200, 10(R4)	; 9F0B	SET 7,(IX+$08)	
+	DEC	R3		; 9F08	DEC L		HL points to (+$00)
+	MOVB	#376, (R3)	; 9F09	LD (HL),$FE	mark HL record as empty
+	BISB	#200, 10(R4)	; 9F0B	SET 7,(IX+$08)	alter IX movement
 	MOVB	#200, 5(R4)	; 9F0F	LD (IX+$05),$80	
 				; 9F13	LD HL,$8F15	
 	BISB	#10, L8F15	; 9F16	SET 3,(HL)	
 	MOV	#25., R1	; 9F18	LD B,$19	plus 25. points
 	CALL	LA414		; 9F1A	CALL $A414	Increment score
-	JMP	L9E1A		; 9F1D	JP $9E1A	next record
-L9F20:
-	MOV	R2, R3		; 9F20	EX DE,HL	
+	JMP	L9E1A		; 9F1D	JP $9E1A	next record by IX
+;
+L9F20:	MOV	R2, R3		; 9F20	EX DE,HL	HL points to (+$02)
 				; 9F21	LD A,$06	
 	ADD	#6, R3		; 9F23	ADD A,L	
-				; 9F24	LD L,A	
-	MOVB	(R3), R2	; 9F25	LD E,(HL)	
+				; 9F24	LD L,A		HL points to (+$08)
+	MOVB	(R3), R2	; 9F25	LD E,(HL)	get movement flags
 	DEC	R3		; 9F26	DEC L	
-	DEC	R3		; 9F27	DEC L	
-	MOVB	(R3), R0	; 9F28	LD D,(HL)	
+	DEC	R3		; 9F27	DEC L		HL points to (+$06)
+	MOVB	(R3), R0	; 9F28	LD D,(HL)	get характер движения
 				; 9F29	LD A,L	
 	SUB	#6, R3		; 9F2A	SUB $06	
-				; 9F2C	LD L,A	
-	BITB	#200, R2	; 9F2D	BIT 7,E	
-	BEQ	L9F32		; 9F2F	JP NZ,$9D7B	
+				; 9F2C	LD L,A		HL points to (+$00)
+	BITB	#200, R2	; 9F2D	BIT 7,E		check movement
+	BEQ	L9F32		; 9F2F	JP NZ,$9D7B	not equal => next record by HL
 	JMP	L9D7B
-L9F32:				; 9F32	LD A,D	
+L9F32:				; 9F32	LD A,D		характер движения
 	CMPB	R0, #22.	; 9F33	CP $16	
 	BEQ	L9ED7		; 9F35	JP Z,$9ED7	
 	CMPB	R0, #6		; 9F38	CP $06	
 	BEQ	L9F44		; 9F3A	JP Z,$9F44	
 	CMPB	R0, #5		; 9F3D	CP $05	
 	BEQ	L9F44		; 9F3F	JP Z,$9F44	
-	MOVB	#376, (R3)	; 9F42	LD (HL),$FE	delete the object
-L9F44:	BISB	#200, 10(R4)	; 9F44	SET 7,(IX+$08)	
+	MOVB	#376, (R3)	; 9F42	LD (HL),$FE	mark HL record as empty
+L9F44:	BISB	#200, 10(R4)	; 9F44	SET 7,(IX+$08)	alter movement flags
 	MOVB	#200, 5(R4)	; 9F48	LD (IX+$05),$80	
-	MOV	L8F15, R3	; 9F4C	LD HL,$8F15	
+	MOV	#L8F15, R3	; 9F4C	LD HL,$8F15	
 	BISB	#100, (R3)	; 9F4F	SET 6,(HL)	
-	JMP	L9E1A		; 9F51	JP $9E1A	next record
-L9F54:
-	MOV	R2, R3		; 9F54	EX DE,HL	
+	JMP	L9E1A		; 9F51	JP $9E1A	next record by IX
+;
+L9F54:	MOV	R2, R3		; 9F54	EX DE,HL	HL points to (+$02)
 				; 9F55	LD A,$06	
-	ADD	#6, R3		; 9F57	ADD A,L	
+	ADD	#6, R3		; 9F57	ADD A,L		HL points to (+$08)
 				; 9F58	LD L,A	
-	BITB	#200, (R3)	; 9F59	BIT 7,(HL)	
+	BITB	#200, (R3)	; 9F59	BIT 7,(HL)	check movement flags
 	BNE	L9F76		; 9F5B	JP NZ,$9F76	
-	MOVB	#376, (R4)	; 9F5E	LD (IX+$00),$FE	 delete the object
-	BISB	#200, (R3)	; 9F62	SET 7,(HL)	
+	MOVB	#376, (R4)	; 9F5E	LD (IX+$00),$FE	 mark IX record as empty
+	BISB	#200, (R3)	; 9F62	SET 7,(HL)	alter movement flags
 	DEC	R3		; 9F64	DEC L	
 	DEC	R3		; 9F65	DEC L	
-	DEC	R3		; 9F66	DEC L	
+	DEC	R3		; 9F66	DEC L		HL points to (+$05)
 	MOVB	#200, (R3)	; 9F67	LD (HL),$80	
-	MOV	L8F15, R3	; 9F69	LD HL,$8F15	
+	MOV	#L8F15, R3	; 9F69	LD HL,$8F15	
 	BISB	#10, (R3)	; 9F6C	SET 3,(HL)	
 	MOV	#25., R1	; 9F6E	LD B,$19	plus 25. points
 	CALL	LA414		; 9F70	CALL $A414	Increment score
-	JMP	L9E1A		; 9F73	JP $9E1A	next record
+	JMP	L9E1A		; 9F73	JP $9E1A	next record by IX
 L9F76:				; 9F76	LD DE,$0008	
-	ADD	#8., R3		; 9F79	ADD HL,DE	
-	JMP	L9D73		; 9F7A	JP $9D73	
-L9F7D:
-	MOV	R2, R3		; 9F7D	EX DE,HL	
+	ADD	#8., R3		; 9F79	ADD HL,DE	HL points to next record
+	JMP	L9D73		; 9F7A	JP $9D73	continue
+;
+L9F7D:	MOV	R2, R3		; 9F7D	EX DE,HL	HL points to (+$02)
 				; 9F7E	LD A,$06	
-	ADD	#6, R3		; 9F80	ADD A,L	
+	ADD	#6, R3		; 9F80	ADD A,L		HL points to (+$08)
 				; 9F81	LD L,A	
-	BITB	#200, (R3)	; 9F82	BIT 7,(HL)	
+	BITB	#200, (R3)	; 9F82	BIT 7,(HL)	check movement flags
 	BNE	L9F76		; 9F84	JP NZ,$9F76	
-	MOVB	#376, (R4)	; 9F87	LD (IX+$00),$FE	 delete the object
+	MOVB	#376, (R4)	; 9F87	LD (IX+$00),$FE	 mark IX record as empty
 	DEC	R3		; 9F8B	DEC L	
-	DEC	R3		; 9F8C	DEC L	
+	DEC	R3		; 9F8C	DEC L		HL points to (+$06)
 	MOV	#140, R1	; 9F8D	LD C,$60	
-	BITB	#20, (R3)	; 9F8F	BIT 4,(HL)	
+	BITB	#20, (R3)	; 9F8F	BIT 4,(HL)	alter характер движения
 	BEQ	L9F95		; 9F91	JR Z,$9F95	
 	MOV	#356, R1	; 9F93	LD C,$EE	
-L9F95:	DEC	R3		; 9F95	DEC L	
+L9F95:	DEC	R3		; 9F95	DEC L		HL points to (+$05)
 	MOVB	(R3), R0	; 9F96	LD A,(HL)	
 	ADD	#2, R0		; 9F97	ADD A,$02	
 	MOVB	R0, (R3)	; 9F99	LD (HL),A	
 	CMPB	R0, R1		; 9F9A	CP C	
 	BHIS	L9FA6		; 9F9B	JP NC,$9FA6	
-	MOV	L8F15, R3	; 9F9E	LD HL,$8F15	
+	MOV	#L8F15, R3	; 9F9E	LD HL,$8F15	
 	BISB	#200, (R3)	; 9FA1	SET 7,(HL)	
-	JMP	L9E1A		; 9FA3	JP $9E1A	next record
+	JMP	L9E1A		; 9FA3	JP $9E1A	next record by IX
 L9FA6:	MOVB	#200, (R3)	; 9FA6	LD (HL),$80	
 	INC	R3		; 9FA8	INC L	
 	INC	R3		; 9FA9	INC L	
-	INC	R3		; 9FAA	INC L	
-	MOVB	#200, (R3)	; 9FAB	LD (HL),$80	
-	MOV	L8F15, R3	; 9FAD	LD HL,$8F15	
+	INC	R3		; 9FAA	INC L		HL points to (+$08)
+	MOVB	#200, (R3)	; 9FAB	LD (HL),$80	set movement flags
+	MOV	#L8F15, R3	; 9FAD	LD HL,$8F15	
 	BISB	#200, (R3)	; 9FB0	SET 7,(HL)	
-	JMP	L9E1A		; 9FB2	JP $9E1A	next record
-L9FB5:
-	MOVB	6(R4), R0	; 9FB5	LD A,(IX+$06)	характер движения
+	JMP	L9E1A		; 9FB2	JP $9E1A	next record by IX
+;
+L9FB5:	MOVB	6(R4), R0	; 9FB5	LD A,(IX+$06)	характер движения
 	CMPB	R0, #5		; 9FB8	CP $05	
 	BEQ	L9FC1		; 9FBA	JP Z,$9FC1	
-	MOVB	#376, (R4)	; 9FBD	LD (IX+$00),$FE	 delete the object
-L9FC1:	MOV	R2, R3		; 9FC1	EX DE,HL	
+	MOVB	#376, (R4)	; 9FBD	LD (IX+$00),$FE	 mark IX record as empty
+L9FC1:	MOV	R2, R3		; 9FC1	EX DE,HL	HL points to (+$02)
 	INC	R3		; 9FC2	INC L	
 	INC	R3		; 9FC3	INC L	
-	INC	R3		; 9FC4	INC L	
+	INC	R3		; 9FC4	INC L		HL points to (+$05)
 	MOVB	(R3), R0	; 9FC5	LD A,(HL)	
 	CMPB	R0, #200	; 9FC6	CP $80	
 	BLO	L9FD0		; 9FC8	JR C,$9FD0	
 	DEC	R3		; 9FCA	DEC L	
 	DEC	R3		; 9FCB	DEC L	
-	DEC	R3		; 9FCC	DEC L	
-	JMP	L9E45		; 9FCD	JP $9E45	
+	DEC	R3		; 9FCC	DEC L		HL points to (+$02)
+	JMP	L9E45		; 9FCD	JP $9E45	next record by HL
 L9FD0:	MOVB	#200, (R3)	; 9FD0	LD (HL),$80	
 	INC	R3		; 9FD2	INC L	
 	INC	R3		; 9FD3	INC L	
-	INC	R3		; 9FD4	INC L	
-	BISB	#200, (R3)	; 9FD5	SET 7,(HL)	
-	MOV	L8F16, R3	; 9FD7	LD HL,$8F15	
+	INC	R3		; 9FD4	INC L		HL points to (+$08)
+	BISB	#200, (R3)	; 9FD5	SET 7,(HL)	alter movement flags
+	MOV	#L8F15, R3	; 9FD7	LD HL,$8F15	
 	BISB	#100, (R3)	; 9FDA	SET 6,(HL)	
-	JMP	L9E1A		; 9FDC	JP $9E1A	next record
-L9FDF:
-	MOV	R2, R3		; 9FDF	EX DE,HL	
-	MOVB	12(R4), R0	; 9FE0	LD A,(IX+$0A)	sprite index
+	JMP	L9E1A		; 9FDC	JP $9E1A	next record by IX
+;
+L9FDF:	MOV	R2, R3		; 9FDF	EX DE,HL	HL points to (+$02)
+	MOVB	12(R4), R0	; 9FE0	LD A,(IX+$0A)	get sprite index
 	CMPB	R0, #14.	; 9FE3	CP $0E		is it Vorton?
-	BNE	L9FE8		; 9FE5	JP Z,$9E45	yes => jump
+	BNE	L9FE8		; 9FE5	JP Z,$9E45	yes => next record by HL
 	JMP	L9E45
+; IX is not a Vorton record
 L9FE8:	DEC	R3		; 9FE8	DEC L	
-	DEC	R3		; 9FE9	DEC L	
-	MOVB	#376, (R3)	; 9FEA	LD (HL),$FE	
-	JMP	L9D7B		; 9FEC	JP $9D7B
-L9FEF:
-	MOV	R2, R3		; 9FEF	EX DE,HL	
+	DEC	R3		; 9FE9	DEC L		HL points to (+$00)
+	MOVB	#376, (R3)	; 9FEA	LD (HL),$FE	mark HL record as empty
+	JMP	L9D7B		; 9FEC	JP $9D7B	next record by HL
+;
+
+L9FEF:	MOV	R2, R3		; 9FEF	EX DE,HL	HL points to (+$02)
 				; 9FF0	LD A,$08	
-	ADD	#8., R3		; 9FF2	ADD A,L	
+	ADD	#8., R3		; 9FF2	ADD A,L		HL points to (+$0A)
 				; 9FF3	LD L,A	
 	MOVB	(R3), R0	; 9FF4	LD A,(HL)	
 	CMPB	R0, #14.	; 9FF5	CP $0E	
 	BNE	LA001		; 9FF7	JP NZ,$A001	
 				; 9FFA	LD DE,$0006	
-	ADD	#6, R3		; 9FFD	ADD HL,DE	
-	JMP	L9D73		; 9FFE	JP $9D73
+	ADD	#6, R3		; 9FFD	ADD HL,DE	HL points to next record
+	JMP	L9D73		; 9FFE	JP $9D73	continue
 LA001:
-	MOVB	#376, (R4)	; A001	LD (IX+$00),$FE	 delete the object
-	JMP	L9E1A		; A005	JP $9E1A	next record
-LA008:
-	CALL	LA270		; A008	CALL $A270	Get next random number
+	MOVB	#376, (R4)	; A001	LD (IX+$00),$FE	 mark IX record as empty
+	JMP	L9E1A		; A005	JP $9E1A	next record by IX
+;
+LA008:	CALL	LA270		; A008	CALL $A270	Get next random number
 	MOV	R3, R0		; A00B	LD A,L		повернуться в случайном направлении
 	BIC	#177771, R0	; A00C	AND $06		одно из 4-х направлений
-	MOVB	R0, 7(R4)	; A00E	LD (IX+$07),A	
+	MOVB	R0, 7(R4)	; A00E	LD (IX+$07),A	set direction
 	JMP	L9E1A		; A011	JP $9E1A	
-LA014:
-	CALL	LA270		; A014	CALL $A270	Get next random number
+;
+LA014:	CALL	LA270		; A014	CALL $A270	Get next random number
 	MOV	R3, R0		; A017	LD A,L		повернуться в случайном направлении
 	BIC	#177770, R0	; A018	AND $07		value 0..7
-	MOVB	R0, 7(R4)	; A01A	LD (IX+$07),A	
-	JMP	L9E1A		; A01D	JP $9E1A	next record
-LA020:
-	CALL	LA270		; A020	CALL $A270	Get next random number
+	MOVB	R0, 7(R4)	; A01A	LD (IX+$07),A	set direction
+	JMP	L9E1A		; A01D	JP $9E1A	next record by IX
+;
+LA020:	CALL	LA270		; A020	CALL $A270	Get next random number
 	MOV	R3, R0		; A023	LD A,L	
 	ADD	#7, R0		; A024	AND $07		value 0..7
 	MOVB	R0, 14(R4)	; A026	LD (IX+$0C),A	
-	JMP	L9E1A		; A029	JP $9DC8	next record
-LA02C:
-	MOVB	7(R4), R0	; A02C	LD A,(IX+$07)	
+	JMP	L9DC8		; A029	JP $9DC8
+;
+LA02C:	MOVB	7(R4), R0	; A02C	LD A,(IX+$07)	get direction
 	ADD	#4, R0		; A02F	ADD A,$04	разворот на 180 градусов
 	BIC	#177410, R0	; A031	RES 3,A	
-	MOVB	R0, 7(R4)	; A033	LD (IX+$07),A	
-	JMP	L9E1A		; A036	JP $9E1A	next record
+	MOVB	R0, 7(R4)	; A033	LD (IX+$07),A	set direction
+	JMP	L9E1A		; A036	JP $9E1A	next record by IX
 ;
 LA039:	.WORD	0
 
@@ -2827,7 +2834,7 @@ LA1CD:	PUSH	R2		; A1CD	EX DE,HL
 ;	CLRB	(R3)		; A1ED	LD (HL),$00	NOTE: Writing attribute, skipping
 	DECB	R0		; A1EF	DEC A	
 	MOVB	R0, L8F18	; A1F0	LD ($8F18),A	
-	MOV	L8F15, R3	; A1F3	LD HL,$8F15	
+	MOV	#L8F15, R3	; A1F3	LD HL,$8F15	
 	BISB	#2, (R3)	; A1F6	SET 1,(HL)	
 ; Current action bit 0 = 0 (also used in DEMO mode)
 LA1F8:
@@ -3047,7 +3054,7 @@ LA34D:	MOVB	R0, L8F14	; A34D	LD ($8F14),A	save the current action byte
 LA350:	PUSH	R1		; A350	PUSH BC	
 	CALL	L9822		; A351	CALL $9822	Remove objects from the shadow screen
 	CALL	LA11B		; A354	CALL $A11B	Objects logic, perform the action
-	CALL	L9C7B		; A357	CALL $9C7B	Process movements?
+	CALL	L9C7B		; A357	CALL $9C7B	Process object movement
 	CALL	L985A		; A35A	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
 	CALL	L9A9B		; A35D	CALL $9A9B	Draw the shadow screen on the real screen
 	POP	R1		; A360	POP BC	
@@ -3069,11 +3076,11 @@ LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	CALL	LA8C5		; A37B	CALL $A8C5	|  show one screen in DEMO
 	POP	R1		; A37E	POP BC		|
-				; A37F	XOR A	
-	CALL	GETKEY		; A380	IN A,($FE)	Check keyboard
-	BEQ	1$		; A382	CPL	        key pressed?
-	RETURN			; A383	AND $1F		yes => exit DEMO
-1$:				; A385	RET NZ	
+				; A37F	XOR A		|
+	CALL	GETKEY		; A380	IN A,($FE)	|  Check keyboard
+	BEQ	1$		; A382	CPL	        |  key pressed?
+	RETURN			; A383	AND $1F		|  yes => exit DEMO
+1$:				; A385	RET NZ	        |
 	SOB	R1, LA37A	; A386	DJNZ $A37A      repeat
 	MOVB	L8F00, R0	; A388	LD A,($8F00)	Zone number?
 	CMPB	R0, #31.	; A38B	CP $1F		
@@ -3433,7 +3440,7 @@ LA694:
 LA8C5:
 	CALL	L9822		; A8C5	CALL $9822	Remove objects from the shadow screen
 	CALL	LA1F8		; A8C8	CALL $A1F8	DEMO mode objects logic
-	CALL	L9C7B		; A8CB	CALL $9C7B	Process movements?
+	CALL	L9C7B		; A8CB	CALL $9C7B	Process object movement
 	CALL	L985A		; A8CE	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
 	CALL	L9A9B		; A8D1	CALL $9A9B	Draw the shadow screen on the real screen
 	RETURN			; A8D4	RET
