@@ -17,10 +17,6 @@
 START::
 	CLR	@#177560
 
-	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
-	CALL	PRINT
-	CALL	PAUSE		; подождём пока очистится экран
-
 	CALL	LB0DE		; Start point
 	CALL	PAUSE
 
@@ -3457,13 +3453,16 @@ LA8D6:
 LB0DE:
 		; B0DE	LD BC,$F300
 LB0E1:
+	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
+	CALL	PRINT
+	CALL	PAUSE		; подождём пока очистится экран
 		; B0E1	LD HL,$785A	
 		; B0E4	CALL $B203	Sound
 LB0E7:		; B0E7	XOR A	
-	CALL	GETKEY		; B0E8	IN A,($FE)	Check keyboard
+	;CALL	GETKEY		; B0E8	IN A,($FE)	Check keyboard
 		; B0EA	CPL	
 		; B0EB	AND $1F	
-	BNE	LB0E7		; B0ED	JR NZ,$B0E7	
+	;BNE	LB0E7		; B0ED	JR NZ,$B0E7	
 	CALL	LB2DA		; B0EF	CALL $B2DA	Prepare shadow screen
 	MOV	#0, LB4CF	; B0F2	XOR A	
 				; B0F3	LD ($B4CF),A	
@@ -3484,17 +3483,20 @@ LB13C:
 1$:	CALL	WTKEY ;STUB
 	CMP	R0, #065		; '5' ?
 	BNE	2$
+	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
+	CALL	PRINT
+	CALL	PAUSE		; подождём пока очистится экран
 	JMP	LB4D0		; B1BC	JP $B4D0	Show Info Screen
 2$:	CMP	R0, #066		; '6' ?
 	BNE	3$
 	CALL	LA367		; B17C	CALL $8F79	JP A367  DEMO MODE
-	BR	LB0E7		; B17F	JP $B0E7	back to start point
+	BR	LB0DE		; B17F	JP $B0E7	back to start point
 3$:	CMP	R0, #067		; '7' ?
 	BNE	4$
-	CALL	L90F2		; B18C	CALL $90F2	
+	CALL	L90F2		; B18C	CALL $90F2	GAME MODE
 	CALL	WTKEY ;STUB
 	;TODO
-        BR	LB0E7 		; B1AA	JP $B0E7	back to start point
+        BR	LB0DE 		; B1AA	JP $B0E7	back to start point
 4$:	CMP	R0, #060		; '0' ?
 	BNE	5$
 	JMP	FINISH			; Finish and exit the app
@@ -3636,51 +3638,33 @@ LB33C:	MOV	#LB499, R3	; B33C	LD HL,$B499	"HIGHWAY ENCOUNTER" pixels address
 ;
 ; Routine: Prepare title/info screen
 LB39A:	;STUB
-; Copy shadow screen to the real screen, 256. x 192. pixels
+; Copy shadow screen to the real screen, 256. x 155. pixels
 LB3A9:
 	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
-	MOV	#104304, R2		; Адрес на реальном экране
-
-	MOV	#18., R0		; Количество верхних пустых строк
-10$:	MOV	#8., R1			; Счётчик по строке
-11$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	SOB	R1, 11$
-	ADD	#<80.-32.>, R2		; to next line
-	SOB	R0, 10$
+	MOV	#<104304+2640>, R2	; Address on the real screen = game screen start + 18. lines
 
 	MOV	#<LDBC0+576.>, R3	; Copy from
 	MOV	#<192.-18.-19.>, R0	; Number of lines to copy
 1$:	PUSH	R0
-	MOV	#8., R1			; Счётчик по строке
-2$:	MOVB	(R3)+, R0		; берём байт
-	BIC    	#177400, R0		; оставляем младший байт
+	MOV	#8., R1			; Counter to loop thru the line
+2$:	MOVB	(R3)+, R0		; get byte
+	BIC    	#177400, R0		; 
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; берём байт
-	BIC    	#177400, R0		; оставляем младший байт
+	MOVB	(R3)+, R0		; get byte
+	BIC    	#177400, R0		; 
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; берём байт
-	BIC    	#177400, R0		; оставляем младший байт
+	MOVB	(R3)+, R0		; get byte
+	BIC    	#177400, R0		; 
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; берём байт
-	BIC    	#177400, R0		; оставляем младший байт
+	MOVB	(R3)+, R0		; get byte
+	BIC    	#177400, R0		; 
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
@@ -3688,24 +3672,6 @@ LB3A9:
 	ADD	#<80.-32.>, R2		; to next line
 	POP	R0
 	SOB	R0, 1$			; continue loop by lines
-
-	MOV	#4., R0		; Количество нижних пустых строк
-30$:	MOV	#8., R1			; Счётчик по строке
-31$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	CLR	(R5)			; Write into the screen
-	INC	R2
-	SOB	R1, 31$
-	ADD	#<80.-32.>, R2		; to next line
-	SOB	R0, 30$
 
 	RETURN
 
