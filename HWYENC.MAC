@@ -122,6 +122,17 @@ L7A00:	; Table with sprite addresses
 	.WORD	LBBC0, LBBC0, LBBC0, LBBC0, LBC50, LBA10, LB980, LBC50
 	.WORD	LBA10, LBA10, LBA10, LBA10, LC0D0, LC0D0, LC0D0, LC0D0
 ; Global objects table, 16. bytes per record, max 240. records
+;   +$01,+$02 -- object position
+;   +$03,+$04 -- this plus current zone offset ($8F03) gives address on the screen
+;   +$05 -- ?? values 000, 020, 030, 120, 160, 170, 340
+;   +$06 -- ?? movement pattern
+;   +$07 -- direction, copied from (IX+$0С) AND $07, values 0..7
+;   +$08 -- movement flags ?? 0 = stop, 1 = move
+;   +$09 -- horz offset (bits 2-3 only)
+;   +$0A -- offset from $8F00, where we have sprite number
+;   +$0B -- procedure number from table $9000
+;   +$0C -- initial direction, copied to +$07
+;   +$0D,+$0E,+$0F -- initial values for +$00,+$01,+$02
 L7B00:	.BYTE	376,336,001,231,334,330,002,002,001,014,021,054,004,044,164,002
 	.BYTE	066,120,002,246,324,140,006,000,000,004,022,334,000,070,120,002
 	.BYTE	076,120,002,045,324,140,012,000,000,004,015,334,000,100,120,002
@@ -364,16 +375,7 @@ L8800:	.BYTE	376,000,000,000,000,000,002,000,002,000,022,000,004,110,270,022
 	.BYTE	102,230,000,055,357,370,031,000,000,014,015,232,000,102,230,000
 
 ; Objects table, 16. bytes each record
-;   +$01,+$02 -- object position
-;   +$03,+$04 -- address on the screen, plus we add offset ($8F03)
-;   +$05 -- ?? values 000, 020, 030, 120, 160, 170, 340
-;   +$06 -- ?? movement pattern
-;   +$07 -- direction, copied from (IX+$0С) AND $07, values 0..7
-;   +$08 -- movement flags ?? 0 = stop, 1 = move
-;   +$09 -- horz offset (bits 2-3 only)
-;   +$0A -- offset from $8F00, where we have sprite number
-;   +$0B -- procedure number from table $9000
-;   +$0C -- ??
+;   $0E,+$0F -- address of the object record in $7B00 table
 L8A00:	.BYTE	034,250,003,364,300,000,000,005,000,010,016,000,000,044,260,000  ; Main Vorton
 L8A10:	.BYTE	044,230,003,161,301,160,020,000,001,010,015,000,000,030,130,000  ; 1st Auto-Vorton
 L8A20:	.BYTE	044,240,003,362,300,160,020,000,001,010,015,000,000,060,144,000  ; 2
@@ -448,7 +450,7 @@ L8AF0:	.BYTE	024,204,003,321,303,340,026,000,000,000,015,204,000,024
 	.BYTE	377,377
 
 ; List of objects to draw, order from far to nearest by Z-coord
-;   1st word -- ?? (000 = end of table) -- вместо первого байта сделано слово
+;   1st word -- ?? (000 = end of table) -- NOTE: byte replaced with word here
 ;   2nd word -- address in $8A00 table
 L8D52:	.WORD	000, 0
 	.WORD	000, 0
@@ -474,23 +476,28 @@ L8D6A:	.WORD	000, 0
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,377
 	.BYTE	377,377,377,377,377,377,377,377,377,377,377,377,377,377,377,000
-; Table used in object movement procedure
-L8E00:	.BYTE	000,002,000,004,340,377,341,377,377,001,000,004,000,000,001,000
-	.BYTE	376,000,000,004,040,000,041,000,377,377,377,000,040,000,040,000
-	.BYTE	000,376,377,374,040,000,037,000,001,377,377,374,000,000,377,377
-	.BYTE	002,000,000,374,340,377,337,377,001,001,000,000,340,377,340,377
-	.BYTE	000,004,000,010,300,377,301,377,376,002,000,010,000,000,001,000
-	.BYTE	374,000,000,010,100,000,101,000,376,376,377,000,100,000,100,000
-	.BYTE	000,374,377,370,100,000,077,000,002,376,377,370,000,000,377,377
-	.BYTE	004,000,000,370,300,377,277,377,002,002,000,000,300,377,300,377
-	.BYTE	000,006,000,014,240,377,241,377,375,003,000,014,000,000,001,000
-	.BYTE	372,000,000,014,140,000,141,000,375,375,377,000,140,000,140,000
-	.BYTE	000,372,377,364,140,000,137,000,003,375,377,364,000,000,377,377
-	.BYTE	006,000,000,364,240,377,237,377,003,003,000,000,240,377,240,377
-	.BYTE	000,010,000,000,201,377,201,377,374,004,000,000,001,000,001,000
-	.BYTE	370,000,000,000,201,000,201,000,374,374,377,000,200,000,200,000
-	.BYTE	000,370,377,000,177,000,177,000,004,374,377,000,377,377,377,377
-	.BYTE	010,000,000,000,177,377,177,377,004,004,000,000,200,377,200,377
+	.EVEN
+; Table used in object movement procedure, 8 bytes each record
+;   +$00      -- ??
+;   +$01,+$02 -- object position change
+;   +$03      -- horz offset change
+;   +$06,+$07 -- offset change
+L8E00:	.BYTE	000,002,000,004,340,377,341,377, 377,001,000,004,000,000,001,000
+	.BYTE	376,000,000,004,040,000,041,000, 377,377,377,000,040,000,040,000
+	.BYTE	000,376,377,374,040,000,037,000, 001,377,377,374,000,000,377,377
+	.BYTE	002,000,000,374,340,377,337,377, 001,001,000,000,340,377,340,377
+	.BYTE	000,004,000,010,300,377,301,377, 376,002,000,010,000,000,001,000
+	.BYTE	374,000,000,010,100,000,101,000, 376,376,377,000,100,000,100,000
+	.BYTE	000,374,377,370,100,000,077,000, 002,376,377,370,000,000,377,377
+	.BYTE	004,000,000,370,300,377,277,377, 002,002,000,000,300,377,300,377
+	.BYTE	000,006,000,014,240,377,241,377, 375,003,000,014,000,000,001,000
+	.BYTE	372,000,000,014,140,000,141,000, 375,375,377,000,140,000,140,000
+	.BYTE	000,372,377,364,140,000,137,000, 003,375,377,364,000,000,377,377
+	.BYTE	006,000,000,364,240,377,237,377, 003,003,000,000,240,377,240,377
+	.BYTE	000,010,000,000,201,377,201,377, 374,004,000,000,001,000,001,000
+	.BYTE	370,000,000,000,201,000,201,000, 374,374,377,000,200,000,200,000
+	.BYTE	000,370,377,000,177,000,177,000, 004,374,377,000,377,377,377,377
+	.BYTE	010,000,000,000,177,377,177,377, 004,004,000,000,200,377,200,377
 
 ;------------------------------------------------------------------------------
 
@@ -629,7 +636,7 @@ L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
 	CALL	LA03B		; 9166	CALL $A03B	Objects logic
 	CALL	L9C7B		; 9169	CALL $9C7B	Process object movement
 	CALL	L985A		; 916C	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
-	CALL	L9A9B		; 916F	CALL $9A9B	Draw the shadow screen on the real screen
+	CALL	L9A9B		; 916F	CALL $9A9B	Draw the shadow screen on the real screen, using draw markers
 	MOVB	L8F00, R0	; 9172	LD A,($8F00)	Zone number
 	CMPB	R0, #30.	; 9175	CP $1E		zone 30.?
 	BLO	L918C		; 9177	JP C,$918C	less => jump
@@ -695,7 +702,8 @@ L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010
 L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 	INC	R1		; 91DD	INC C	
 	INC	R1		; 91DE	INC C	
-	MOV	R3, R0		; 91DF	LD A,L	
+	MOV	R3, R0		; 91DF	LD A,L
+	BIC	#177400, R0	
 	CMPB	R0, #120	; 91E0	CP $50		TODO: проверить условие
 	BLO	L91EB		; 91E2	JP C,$91EB	
 	MOV	#L926F, R3	; 91E5	LD HL,$926F	"GAME OVER ALL VORTONS DESTROYED"
@@ -703,9 +711,9 @@ L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)	
 	CMPB	R0, #376	; 91EC	CP $FE	
 	BLO	L91D9		; 91EE	JP NC,$91D9	
-	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	сохраняем адрес таблицы объектов
-				; 91F4	LD DE,$0008	to movement flags
-	ADD	#10, R3		; 91F7	ADD HL,DE	
+	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	set object table address
+	MOV	#10, R2		; 91F4	LD DE,$0008	
+	ADD	R2, R3		; 91F7	ADD HL,DE	to movement flags
 	BITB	#128., (R3)	; 91F8	BIT 7,(HL)	
 	BNE	L91DC		; 91FA	JP NZ,$91DC	
 	MOV	R1, R0		; 91FD	LD A,C	
@@ -737,7 +745,7 @@ L9215:		; 9215	LD A,(DE)
 				; 9223	LD DE,$0005	
 	ADD	#5, R3		; 9226	ADD HL,DE	
 	MOVB	#14., (R3)	; 9227	LD (HL),$0E	
-	CALL	L92CE		; 9229	CALL $92CE	Prepare objects
+	CALL	L92CE		; 9229	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; 922C	CALL $95EF	Show the screen
 	JMP	L910A		; 922F	JP $910A	continue main loop
 
@@ -759,24 +767,24 @@ L92A0:	.WORD	105505
 	.BYTE	131,312,140,121,145,143,125,115,135,137,124,125,312,376  ; "PAUSE MODE"
 	.EVEN
 
-; Routine: Prepare objects
-L92CE:	MOV	#L8D52, R3	; 92CE	LD HL,$8D52	адрес начала таблицы 8D52
-	CLR	(R3)		; 92D1	LD (HL),$00	очищаем таблицу (000 = признак конца таблицы)
-	MOV	#L8A90, R4	; 92D3	LD IX,$8A90	адрес начала массива записей
+; Routine: Prepare objects for the current Zone
+L92CE:	MOV	#L8D52, R3	; 92CE	LD HL,$8D52	start of 8D52 table
+	CLR	(R3)		; 92D1	LD (HL),$00	clear the table (00 = table end marker)
+	MOV	#L8A90, R4	; 92D3	LD IX,$8A90	current zone objects
 L92D7:	MOVB	(R4), R0	; 92D7	LD A,(IX+$00)	
 	CMPB	R0, #377	; 92DA	CP $FF	        end of table marker?
-	BEQ	L92F5		; 92DC	JR Z,$92F5	да => переходим
-	MOV	16(R4), R3	; 92DE	LD L,(IX+$0E)	получаем адрес куда копировать
-				; 92E1	LD H,(IX+$0F)	
+	BEQ	L92F5		; 92DC	JR Z,$92F5	yes => jump
+	MOV	16(R4), R3	; 92DE	LD L,(IX+$0E)	
+				; 92E1	LD H,(IX+$0F)	HL = address of the source record
 	MOV	R4, R2		; 92E4	LD E,IXl	
 				; 92E6	LD D,IXh	
 				; 92E8	EX DE,HL	
-	MOV	#14., R1	; 92E9	LD BC,$000E	14. байт
-1$:	MOVB	(R2)+, (R3)+	; 92EC	LDIR	        копируем
+	MOV	#7, R1		; 92E9	LD BC,$000E	14. bytes
+1$:	MOV	(R2)+, (R3)+	; 92EC	LDIR	        copy
 	SOB	R1, 1$
 				; 92EE	LD BC,$0010	
-	ADD	#16., R4	; 92F1	ADD IX,BC	переходим к следующей записи
-	BR	L92D7		; 92F3	JR $92D7	продолжаем цикл
+	ADD	#16., R4	; 92F1	ADD IX,BC	next record
+	BR	L92D7		; 92F3	JR $92D7	repeat
 L92F5:
 	MOV	L8F01, R3	; 92F5	LD HL,($8F01)	object table address
 	INC	R3		; 92F8	INC HL	
@@ -789,16 +797,16 @@ L92F5:
 				; 92FD	AND A	
 				; 92FE	JR NZ,$930A	
 				; 9300	LD A,E	
-				; 9301	CP $B0	
-	BHIS	L930A		; 9303	JR NC,$930A	
-	DEC	R3		; 9305	DEC HL	
-	MOVB	#260, (R3)	; 9306	LD (HL),$B0	
-				; 9308	LD E,A	
-	MOVB	(R3), R2	; 9309	LD E,(HL)
-L930A:	MOV	#1, R0		; 930A	LD A,$01	Zone number?
+				; 9301	CP $B0		DE < 176. ?
+	BHIS	L930A		; 9303	JR NC,$930A	no => jump
+	DEC	R3		; 9305	DEC HL		HL points to (+$01)
+	MOV	#260, R2	; 9306	LD (HL),$B0	
+	MOVB	R2, (R3)	; 9308	LD E,A	
+				; 9309	LD E,(HL)
+L930A:	MOV	#1, R0		; 930A	LD A,$01	initial Zone number
 	MOV	#260, R3	; 930C	LD HL,$00B0	initial position
 	MOV	#3760, R4	; 930F	LD IX,$07F0	initial offset
-L9313:				; 9313	EX AF,AF'	save A
+L9313:				; 9313	EX AF,AF'	save A (Zone number)
 	PUSH	R2		; 9314	PUSH DE	
 				; 9315	EX DE,HL	
 				; 9316	AND A	
@@ -815,9 +823,9 @@ L9323:	POP	R2		; 9323	POP DE
 	ADD	#260, R3	; 9327	ADD HL,BC	
 				; 9328	LD BC,$0AEA	87.*32. = offset from one zone to another
 	ADD	#5352, R4	; 932B	ADD IX,BC	
-				; 932D	EX AF,AF'	restore A
+				; 932D	EX AF,AF'	restore A (Zone number)
 	INC	R0		; 932E	INC A		next Zone
-	BR	L9313		; 932F	JR $9313	
+	BR	L9313		; 932F	JR $9313	repeat
 L9331:	POP	R2		; 9331	POP DE	
 	MOV	R3, L8F07	; 9332	LD ($8F07),HL	current zone high pos
 				; 9335	LD BC,$FFD0	-48.
@@ -832,7 +840,7 @@ L9331:	POP	R2		; 9331	POP DE
 	MOVB	R0, L8F1C	; 934B	LD ($8F1C),A	set Zone number
 	CMPB	R0, #40		; 934E	CP $20	        zone 32. ?
 	BLO	L9359		; 9350	JR C,$9359	less => jump
-	MOV	#40, R0		; 9352	LD A,$20	
+	MOV	#40, R0		; 9352	LD A,$20	32.
 	MOVB	R0, (R3)	; 9354	LD (HL),A	
 	DEC	R0		; 9355	DEC A	
 	BR	L935A		; 9356	JP $935A	
@@ -840,39 +848,39 @@ L9359:	MOVB	R0, (R3)	; 9359	LD (HL),A
 L935A:	MOV	R0, R1		; 935A	LD B,A	
 	MOV	#37, R0		; 935B	LD A,$1F	31.
 	MOV	#10., R5	; 935D	LD C,$0A	
-	SUB	R1, R0		; 935F	SUB B	
-	CMP	R0, #10.	; 9360	CP C	
-	BHIS	L9367		; 9361	JR NC,$9367	
-	MOV	#10., R1	; 9363	LD B,C	
-	MOV	R0, R5		; 9364	LD C,A	
+	SUB	R1, R0		; 935F	SUB B		user-friendly zone number
+	CMP	R0, #10.	; 9360	CP C		< 10. ?
+	BHIS	L9367		; 9361	JR NC,$9367	no => jump
+	MOV	#10., R1	; 9363	LD B,C		space
+	MOV	R0, R5		; 9364	LD C,A		lower digit
 	BR	L936F		; 9365	JR $936F	
 L9367:	CLR	R1		; 9367	LD B,$00	
 L9369:	INC	R1		; 9369	INC B		в B набираем старшую десятичную цифру
 	SUB	R5, R0		; 936A	SUB C		-10.
 	CMP	R0, R5		; 936B	CP C		< 10. ?
-	BHIS	L9369		; 936C	JR NC,$9369	нет => повторяем
-	MOV	R0, R5		; 936E	LD C,A		сохраняем младшую цифру
-L936F:	MOV	R1, R0		; 936F	LD A,B		работаем со старшей цифрой
+	BHIS	L9369		; 936C	JR NC,$9369	no => jump
+	MOV	R0, R5		; 936E	LD C,A		lower digit
+L936F:	MOV	R1, R0		; 936F	LD A,B		working with upper digit
 	ADD	R0, R0		; 9370	ADD A,A		= X*2
 	ADD	R1, R0		; 9371	ADD A,B		= X*2+X
 	ADD	R0, R0		; 9372	ADD A,A		= (X*2+X)*2 = X*6
 	MOV	#L94F9, R3	; 9373	LD HL,$94F9	адрес списка с индексами спрайтов для больших цифр
 	MOV	R0, R2		; 9376	LD D,$00	
 				; 9378	LD E,A	
-	MOV	R5, R0		; 9379	LD A,C		берём младшую цифру
+	MOV	R5, R0		; 9379	LD A,C		get lower digit
 	ADD	R0, R0		; 937A	ADD A,A		= X*2
 	ADD	R5, R0		; 937B	ADD A,C		= X*2+X
 	ADD	R0, R0		; 937C	ADD A,A		= (X*2+X)*2 = X*6
 	PUSH	R0		; 937D	EX AF,AF'	
 	ADD	R2, R3		; 937E	ADD HL,DE	
 	MOV	#L95E3, R4	; 937F	LD IX,$95E3	адрес массива адресов на экране для цифр ZONE
-	CALL	L9394		; 9383	CALL $9394	вывод первой цифры ZONE
+	CALL	L9394		; 9383	CALL $9394	show first ZONE digit
 	MOV	#L94F9, R3	; 9386	LD HL,$94F9	адрес списка с индексами спрайтов для больших цифр
 				; 9389	LD D,$00	
 	POP	R0		; 938B	EX AF,AF'	
 				; 938C	LD E,A	
 	ADD	R0, R3		; 938D	ADD HL,DE	
-	CALL	L9394		; 938E	CALL $9394	вывод второй цифры ZONE
+	CALL	L9394		; 938E	CALL $9394	show second ZONE digit
 	BR	L93B7		; 9391	JP $93B7	
 
 ; Procedure: Draw digit with size of 16x24 pixels into the ZONE indicator
@@ -888,13 +896,13 @@ L9396:	MOVB	(R3)+, R2	; 9396	LD E,(HL)	взяли номер спрайта
 	ADD	R3, R3		; 939F	ADD HL,HL	
 	ADD	R3, R3		; 93A0	ADD HL,HL	*8.
 	ADD	#L953B, R3	; 93A1	ADD HL,DE	получили адрес спрайта 8x8
-	MOV	(R4)+, R2	; 93A2	LD E,(IX+$00)	адрес на экране
+	MOV	(R4)+, R2	; 93A2	LD E,(IX+$00)	address on the screen
 				; 93A5	LD D,$50	
-	MOV	#8., R1		; 93A7	LD B,$08	счётчик = 8.
+	MOV	#8., R1		; 93A7	LD B,$08	counter = 8.
 L93A9:	MOVB	(R3)+, R0	; 93A9	LD A,(HL)	получаем 8 пикселов спрайта
 	BIC	#177400, R0
 	SWAB	R0
-	MOV	R2, @#176640	; 93AA	LD (DE),A	пишем в экран
+	MOV	R2, @#176640	; 93AA	LD (DE),A	write into screen
 	MOV	R0, @#176642	; 93AB	INC HL	
 	ADD	#80., R2	; 93AC	INC D		next line
 	SOB	R1, L93A9	; 93AD	DJNZ $93A9	repeat
@@ -906,13 +914,13 @@ L93A9:	MOVB	(R3)+, R0	; 93A9	LD A,(HL)	получаем 8 пикселов спрайта
 	RETURN			; 93B6	RET
 
 ; We come here after we drawn ZONE digits
-L93B7:
-	MOV	#L7B00, R4	; 93B7	LD IX,$7B00	global objects table
+; First, we select objects from $7B00 table to $8A90 table
+L93B7:	MOV	#L7B00, R4	; 93B7	LD IX,$7B00	global objects table
 	MOV	#L8A90, R2	; 93BB	LD DE,$8A90	current zone objects
-	MOV	#44., R5	; 93BE	LD A,$2C	loop counter
+	MOV	#44., R5	; 93BE	LD A,$2C	max number of objects to select
 				; 93C0	EX AF,AF'	
 L93C1:	MOVB	(R4), R0	; 93C1	LD A,(IX+$00)	<
-	BIC	#177400, R0			;	|
+	BIC	#177400, R0	;			|
 	CMPB	R0, #376	; 93C4	CP $FE		|  marked to skip?
 	BHIS	L93F2		; 93C6	JR NC,$93F2	|  yes => skip
 	MOVB	2(R4), R3	; 93C8	LD L,(IX+$01)	
@@ -925,12 +933,12 @@ L93C1:	MOVB	(R4), R0	; 93C1	LD A,(IX+$00)	<
 				; 93D5	LD A,H	
 	CMP	R3, #512.	; 93D6	CP $02		< 512. ?
 	BHIS	L93F2		; 93D8	JR NC,$93F2	no => skip the record
-	MOV	#14., R1	; 93DA	LD BC,$000E	14. bytes
+	MOV	#7, R1		; 93DA	LD BC,$000E	14. bytes
 				; 93DD	EX DE,HL	
 	MOV	R4, R3		; 93DE	LD E,IXl	copy from: current IX record
 				; 93E0	LD D,IXh	
 				; 93E2	EX DE,HL	
-1$:	MOVB	(R3)+, (R2)+	; 93E3	LDIR		copy to the DE record
+1$:	MOV	(R3)+, (R2)+	; 93E3	LDIR		copy to the DE record
 	SOB	R1, 1$
 				; 93E5	LD A,IXl	
 	MOV	R4, (R2)+	; 93E7	LD (DE),A	save the IX address
@@ -953,7 +961,7 @@ L93FD:	MOVB	#377, (R2)	; 93FD	LD A,$FF	mark end of table
 	MOV	#L7B00, R4	; 9400	LD IX,$7B00	global objects table
 	MOV	#16., R1	; 9404	LD BC,$0010	
 L9407:	MOVB	5(R4), R0	; 9407	LD A,(IX+$05)	<
-	BIC	#177400, R0			;	|
+	BIC	#177400, R0	;			|
 	CMPB	R0, #128.	; 940A	CP $80		|
 	BLO	L941A		; 940C	JR C,$941A	|
 	CMPB	R0, #224.	; 940E	CP $E0		|
@@ -1413,53 +1421,55 @@ L97F6:	PUSH	R1		; 97F6	PUSH BC
 	MOV	#576., R1	; 981A	LD BC,$0240	
 2$:	CLRB	(R3)+		; 981D	LDIR	
 	SOB	R1, 2$
-;
-	JMP	LA546 		; 981F	JP $A546
+; Now draw flat blockers on both shadow screens
+	JMP	LA546 		; 981F	JP $A546	Draw flat blockers
 
-; Routine: Remove objects from the shadow screen
+; Routine: Remove objects from the second shadow screen
+; by copying pixels from the first shadow screen
 L9822:
 	MOV	#L8D52, R3	; 9822	LD HL,$8D52	адрес начала таблицы
 	MOVB	(R3), R0	; 9825	LD A,(HL)	
-				; 9826	AND A		таблица пуста?
-	BEQ	L9859		; 9827	JP Z,$9859	да => выходим
-L982A:	INC	R3		; 982A	INC L		NOTE: первый байт записи заменён на слово
+				; 9826	AND A		is the table empty?
+	BEQ	L9859		; 9827	JP Z,$9859	yes => return
+L982A:	INC	R3		; 982A	INC L		NOTE: first byte replaced with word
 	INC	R3
-	MOVB	(R3)+, R2	; 982B	LD E,(HL)	
-	BIC	#177400, R2	; 982C	INC L	
-	SWAB	R2
-	BISB	(R3)+, R2	; 982D	LD D,(HL)	DE = адрес записи об объекте
-	SWAB	R2      	; 982E	INC L	
+	MOV	(R3)+, R2	; 982B	LD E,(HL)	NOTE: word aligned
+				; 982C	INC L	
+		
+				; 982D	LD D,(HL)	DE = адрес записи об объекте
+			      	; 982E	INC L	
 	PUSH	R3		; 982F	PUSH HL		сохраняем адрес в таблице 8D52
 	MOV	R2, R3		; 9830	EX DE,HL	
-	INC	R3		; 9831	INC L	
-	INC	R3		; 9832	INC L	
-	INC	R3		; 9833	INC L	
+	ADD	#3, R3		; 9831	INC L	
+				; 9832	INC L	
+				; 9833	INC L		HL points to (+$03)
 	MOVB	(R3)+, R2	; 9834	LD E,(HL)	
-	BIC	#177400, R2	; 9835	INC L	
+	BIC	#177400, R2	; 9835	INC L		HL points to (+$04)
 	SWAB	R2
-	BISB	(R3), R2	; 9836	LD D,(HL)	DE = IX+$03 и IX+$04	
+	BISB	(R3), R2	; 9836	LD D,(HL)	DE = object offset
 	SWAB	R2
-	MOV	L8F03, R3	; 9837	LD HL,($8F03)	current zone offset
-	ADD	R2, R3		; 983A	ADD HL,DE	
-	MOV	R3, R2		; 983B	LD E,L	
+	ADD	L8F03, R2	; 9837	LD HL,($8F03)	current zone offset
+	MOV	R2, R3		; 983A	ADD HL,DE	
+				; 983B	LD E,L	
 				; 983C	LD D,H	
 				; 983D	LD BC,$F005	-4091.
-	SUB	#4091., R3	; 9840	ADD HL,BC	минус расстояние между двумя теневыми экранами
-	MOV	#24., R0	; 9841	LD A,$18	24.
-L9843:	MOV	#3, R1		; 9843	LD BC,$0003	
-1$:	MOVB	(R3)+, (R2)+	; 9846	LDIR	
-	SOB	R1, 1$
-	MOV	#177735, R1	; 9848	LD BC,$FFDD	-23.
-				; 984B	EX DE,HL	
-	ADD	R1, R2		; 984C	ADD HL,BC	
-				; 984D	EX DE,HL	
-	ADD	R1, R3		; 984E	ADD HL,BC	
-				; 984F	DEC A	
-	SOB	R0, L9843	; 9850	JP NZ,$9843	
+	SUB	#4091., R3	; 9840	ADD HL,BC	minus distance between the screens
+	MOV	#24., R0	; 9841	LD A,$18	24. = sprite height
+	MOV	#35., R1
+L9843:	MOVB	(R3)+, (R2)+	; 9843	LD BC,$0003	<
+	MOVB	(R3)+, (R2)+	; 9846	LDIR		|  copy 3 bytes = 24. pixels
+	MOVB	(R3)+, (R2)+	;			|
+				; 9848	LD BC,$FFDD	|  -35. = -32. - 3
+				; 984B	EX DE,HL	|
+	SUB	R1, R2		; 984C	ADD HL,BC	|  one line up
+				; 984D	EX DE,HL	|
+	SUB	R1, R3		; 984E	ADD HL,BC	|  one line up
+				; 984F	DEC A		|
+	SOB	R0, L9843	; 9850	JP NZ,$9843	repeat
 	POP	R3		; 9853	POP HL		восстановили адрес в таблице 8D52
 	MOVB	(R3), R0	; 9854	LD A,(HL)	
-				; 9855	AND A		конец таблицы?
-	BNE	L982A		; 9856	JP NZ,$982A	нет => продолжаем цикл
+				; 9855	AND A		end of table?
+	BNE	L982A		; 9856	JP NZ,$982A	no => continue the loop
 L9859:	RETURN			; 9859	RET	
 
 ; Routine: Prepare table 8D52 (sort out objects by depth), and draw the objects
@@ -1537,21 +1547,20 @@ L98CA:	MOV	R5, R0		; 98CA	EX AF,AF'	restore A
 	INC	R3		; 98CC	INC L		NOTE: первый байт записи заменён на слово
 	MOV	R4, R2		; 98CD	LD E,IXl	
 				; 98CF	LD D,IXh	
-	MOV	R2, (R3)	; 98D1	LD (HL),E	NOTE: здесь выравнивание по слову
+	MOV	R2, (R3)	; 98D1	LD (HL),E	NOTE: word aligned
 				; 98D2	INC L	
 				; 98D3	LD (HL),D	
 L98D4:				; 98D4	LD DE,$0010	
-	ADD	#16., R4	; 98D7	ADD IX,DE	переходим к следующей записи
+	ADD	#16., R4	; 98D7	ADD IX,DE	next record by IX
 	BR	L9866		; 98D9	JP $9866	
 ; Дальше идёт отрисовка объектов по порядку, установленному таблицей $8D52
 L98DC:	MOV	#L8D52, R3	; 98DC	LD HL,$8D52	адрес начала таблицы
 	MOVB	(R3), R0	; 98DF	LD A,(HL)	
 	BNE	L98E2		; 98E0	AND A	
 	RETURN			; 98E1	RET Z	
-L98E2:
-	INC	R3		; 98E2	INC L		NOTE: первый байт таблицы заменён на слово
+L98E2:	INC	R3		; 98E2	INC L		NOTE: первый байт таблицы заменён на слово
 	INC	R3
-	MOV	(R3)+, R4	; 98E3	LD A,(HL)	NOTE: здесь выравнивание по слову
+	MOV	(R3)+, R4	; 98E3	LD A,(HL)	NOTE: word aligned
 				; 98E4	LD IXl,A	
 				; 98E6	INC L	
 				; 98E7	LD A,(HL)	
@@ -1581,7 +1590,7 @@ L98E2:
 	MOVB	4(R4), R1	; 9906	LD C,(IX+$03)	
 	BIC	#177400, R1
 	SWAB	R1
-	BISB	3(R4), R1	; 9909	LD B,(IX+$04)	
+	BISB	3(R4), R1	; 9909	LD B,(IX+$04)	BC = object offset
 	MOV	R3, R5		; 990C	PUSH HL		save HL
 	MOV	L8F03, R3	; 990D	LD HL,($8F03)	current zone offset
 	ADD	R1, R3		; 9910	ADD HL,BC	
@@ -1599,16 +1608,16 @@ L9980:	POP	R3		; 9980	POP HL		restore the address "where to draw"
 				; 9981	LD A,H	
 	CMP	R3, #LE900	; 9982	CP $E9	        рисовали во второй теневой экран?
 	BLO	L99A8		; 9984	JP C,$99A8	нет => пропускаем
+; Save draw markers for the sprite drawn
 				; 9987	EX DE,HL	
-	SUB	#LE900, R3	; 9988	SUB $E9	        получаем смещение от начала теневого экрана
-	MOV	R3, R0
-				; 998A	ADD A,A	
-	BIC	#377, R3	; 998B	ADD A,A		оставляем старший байт
-	ASR	R3		; 998C	ADD A,A	
+	SUB	#LE900, R3	; 9988	SUB $E9	        calculate offset from the screen start
+	MOV	R3, R0		; 998A	ADD A,A	
+	BIC	#377, R3	; 998B	ADD A,A		
+	ASR	R3		; 998C	ADD A,A		bits 3-7
 	ASR	R3		; 998D	LD L,A	
 	ASR	R3		; 998E	LD H,$00	
 				; 9990	ADD HL,HL	
-				; 9991	ADD HL,HL	
+				; 9991	ADD HL,HL	bits 5-9
 				; 9992	LD A,E	
 	BIC	#177740, R0	; 9993	AND $1F		offset within a single line -- 0..31.
 				; 9995	LD E,A	
@@ -1636,22 +1645,22 @@ L99A8:
 				; 99B6	EX AF,AF'	
 	MOV	#7, R5		; 99B7	LD A,$07	loop counter = 7
 	MOV	#31., R1	; 99B9	LD BC,$001F	line length minus 1
-L99BC:				; 99BC	EX AF,AF'	
-	CMPB	R0, (R3)	; 99BD	CP (HL)	
-	BNE	L99C1		; 99BE	JR NZ,$99C1	
-	MOVB	R0, (R2)	; 99C0	LD (DE),A	
-L99C1:	INC	R3		; 99C1	INC L	
-	INC	R2		; 99C2	INC E	
-	CMPB	R0, (R3)	; 99C3	CP (HL)	
-	BNE	L99C7		; 99C4	JR NZ,$99C7	
-	MOVB	R0, (R2)	; 99C6	LD (DE),A	
-L99C7:	ADD	R1, R3		; 99C7	ADD HL,BC	to next line
-				; 99C8	EX DE,HL	
-	ADD	R1, R2		; 99C9	ADD HL,BC	to next line
-				; 99CA	EX DE,HL	
-				; 99CB	EX AF,AF'	
-				; 99CC	DEC A	
-	SOB	R5, L99BC	; 99CD	JP NZ,$99BC	продолжение цикла по строкам
+L99BC:				; 99BC	EX AF,AF'	<
+	CMPB	R0, (R3)	; 99BD	CP (HL)		|
+	BNE	L99C1		; 99BE	JR NZ,$99C1	|
+	MOVB	R0, (R2)	; 99C0	LD (DE),A	|
+L99C1:	INC	R3		; 99C1	INC L		|
+	INC	R2		; 99C2	INC E		|
+	CMPB	R0, (R3)	; 99C3	CP (HL)		|
+	BNE	L99C7		; 99C4	JR NZ,$99C7	|
+	MOVB	R0, (R2)	; 99C6	LD (DE),A	|
+L99C7:	ADD	R1, R3		; 99C7	ADD HL,BC	|  to next line
+				; 99C8	EX DE,HL	|
+	ADD	R1, R2		; 99C9	ADD HL,BC	|  to next line
+				; 99CA	EX DE,HL	|
+				; 99CB	EX AF,AF'	|
+				; 99CC	DEC A		|
+	SOB	R5, L99BC	; 99CD	JP NZ,$99BC	repeat loop by lines
 	RETURN 			; 99D0	RET		
 ; Таблица из 4-х элементов для выбора процедуры отрисовки спрайта	
 L9915:	.WORD	L99D1	; Draw sprite with shift by 4px
@@ -1895,34 +1904,34 @@ L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)
 	SOB	R1, L9A74	; 9A98	DJNZ $9A74	повтор цикла
 	RETURN			; 9A9A	RET
 
-; Routine -- Draw the shadow screen on the real screen
+; Routine -- Draw the shadow screen on the real screen, using draw markers LFD00
 L9A9B:
 	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	Address of table with shadow screen line addresses
-	MOV	(R3), R0	; 9A9E	LD A,(HL)	NOTE: byte replaced to word
-L9A9F:	INC	R3		; 9A9F	INC HL	
+	MOV	(R3), R0	; 9A9E	LD A,(HL)	number of blocks in the line
+L9A9F:	INC	R3		; 9A9F	INC HL		NOTE: byte replaced with word
 	INC	R3
 	MOV	(R3)+, R2	; 9AA0	LD E,(HL)	
 				; 9AA1	INC HL	
-				; 9AA2	LD D,(HL)	DE = адрес в теневом экране
+				; 9AA2	LD D,(HL)	DE = address in the shadow screen
 				; 9AA3	INC HL	
 	PUSH	R2		; 9AA4	PUSH DE	
 	MOV	(R3)+, R2	; 9AA5	LD E,(HL)
 				; 9AA6	INC HL	
-				; 9AA7	LD D,(HL)	DE = адрес на экране -- конец выводимой строки
+				; 9AA7	LD D,(HL)	DE = address on the real screen
 				; 9AA8	INC HL	
 	MOV	(R3)+, R1	; 9AA9	LD C,(HL)	
 				; 9AAA	INC HL	
-				; 9AAB	LD B,(HL)	BC = адрес конца массива
+				; 9AAB	LD B,(HL)	BC points to draw markers, end of the line
 				; 9AAC	INC HL	
 	MOV	(SP), R5	; 9AAD	EX (SP),HL	теперь HL = адрес в теневом экране
 	MOV	R3, (SP)
 	MOV	R5, R3
 	MOV	R0, R4		; 9AAE	LD IXh,A	счётчик цикла по строке
 L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
-				; 9AB1	AND A		|  пусто?
-	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  да => переходим
+				; 9AB1	AND A		|  is marker empty?
+	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  yes => skip the block
 	DEC	R0		; 9AB5	DEC A		|
-	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|
+	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|  update marker value
 	MOV	R1, R5		; 9AB7	LD IXl,B	|  save B
 	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
 L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
@@ -1946,8 +1955,8 @@ L9ACA:						;	|
 				; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
 	POP	R3		; 9AD2	POP HL	
 	MOVB	(R3), R0	; 9AD3	LD A,(HL)	
-				; 9AD4	AND A	
-	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	продолжение цикла по строкам
+				; 9AD4	AND A		end of table?
+	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	no => repeat
 ;
 	MOVB	L8F0B, R0	; 9AD8	LD A,($8F0B)	адрес в таблице 8D52
 	CMP	R0, #L8D6A	; 9ADB	CP $6A		< 8D6A ? объектов меньше 8
@@ -2093,25 +2102,29 @@ L9BE2:	MOVB	L8F16, R0	; 9BE2	LD A,($8F16)	get the counter
 	BR	L9BD9		; 9BFA	JR $9BD9        show movement indication
 
 ; Data block: 18 records used to draw the shadow screen
+;   1st word -- number of blocks in the line; NOTE: byte replaced with word
+;   2nd word -- address on the shadow screen
+;   3rd word -- address on the real screen
+;   4th word -- address in the draw markers area
 L9BFC:	.WORD	012, <LFD00-1027>, 132575, <LFD00+553.>	; 0A FAE9 5729 FF29  line 18
-	.WORD	014, <LFD00-1425>, 131377, <LFF29-36> 	; 0C F9EB 570B FF0B
-	.WORD	016, <LFD00-2023>, 130201, <LFF29-74> 	; 0E F8ED 4FED FEED
-	.WORD	020, <LFD00-2421>, 127003, <LFF29-132> 	; 10 F7EF 4FCF FECF
-	.WORD	022, <LFD00-3017>, 125605, <LFF29-170> 	; 12 F6F1 4FB1 FEB1
-	.WORD	024, <LFD00-3415>, 124407, <LFF29-226> 	; 14 F5F3 4F93 FE93
-	.WORD	026, <LFD00-4013>, 123211, <LFF29-264> 	; 16 F4F5 4F75 FE75
-	.WORD	030, <LFD00-4411>, 122013, <LFF29-322> 	; 18 F3F7 4F57 FE57
-	.WORD	032, <LFD00-5007>, 120615, <LFF29-360> 	; 1A F2F9 4F39 FE39
-	.WORD	033, <LFD00-5405>, 117417, <LFF29-416> 	; 1B F1FB 4F1B FE1B
-	.WORD	033, <LFD00-6003>, 116221, <LFF29-454> 	; 1B F0FD 47FD FDFD
-	.WORD	033, <LFD00-6401>, 115023, <LFF29-512> 	; 1B EFFF 47DF FDDF
-	.WORD	031, <LFD00-7001>, 113623, <LFF29-552> 	; 19 EEFF 47BF FDBF
-	.WORD	027, <LFD00-7401>, 112423, <LFF29-612> 	; 17 EDFF 479F FD9F
-	.WORD	025, <LE900+1777>, 111223, <LFF29-652> 	; 15 ECFF 477F FD7F
-	.WORD	023, <LE900+1377>, 110023, <LFF29-712> 	; 13 EBFF 475F FD5F  line 3
-	.WORD	021, <LE900+777>,  106623, <LFF29-752> 	; 11 EAFF 473F FD3F  line 2
-	.WORD	017, <LE900+377>,  105423, <LFF29-1012>	; 0F E9FF 471F FD1F  line 1
-	.WORD	000
+	.WORD	014, <LFD00-1425>, 131377, <LFD00+523.>	; 0C F9EB 570B FF0B
+	.WORD	016, <LFD00-2023>, 130201, <LFD00+493.>	; 0E F8ED 4FED FEED
+	.WORD	020, <LFD00-2421>, 127003, <LFD00+463.>	; 10 F7EF 4FCF FECF
+	.WORD	022, <LFD00-3017>, 125605, <LFD00+433.>	; 12 F6F1 4FB1 FEB1
+	.WORD	024, <LFD00-3415>, 124407, <LFD00+403.> ; 14 F5F3 4F93 FE93
+	.WORD	026, <LFD00-4013>, 123211, <LFD00+373.>	; 16 F4F5 4F75 FE75
+	.WORD	030, <LFD00-4411>, 122013, <LFD00+343.>	; 18 F3F7 4F57 FE57
+	.WORD	032, <LFD00-5007>, 120615, <LFD00+313.>	; 1A F2F9 4F39 FE39
+	.WORD	033, <LFD00-5405>, 117417, <LFD00+283.>	; 1B F1FB 4F1B FE1B
+	.WORD	033, <LFD00-6003>, 116221, <LFD00+253.> ; 1B F0FD 47FD FDFD
+	.WORD	033, <LFD00-6401>, 115023, <LFD00+223.>	; 1B EFFF 47DF FDDF
+	.WORD	031, <LFD00-7001>, 113623, <LFD00+191.>	; 19 EEFF 47BF FDBF
+	.WORD	027, <LE900+2377>, 112423, <LFD00+159.> ; 17 EDFF 479F FD9F
+	.WORD	025, <LE900+1777>, 111223, <LFD00+127.> ; 15 ECFF 477F FD7F
+	.WORD	023, <LE900+1377>, 110023, <LFD00+95.> 	; 13 EBFF 475F FD5F  line 3
+	.WORD	021, <LE900+777>,  106623, <LFD00+63.> 	; 11 EAFF 473F FD3F  line 2
+	.WORD	017, <LE900+377>,  105423, <LFD00+31.>	; 0F E9FF 471F FD1F  line 1
+	.WORD	000  ; end-of-table marker
 
 ; Routine: Process object movement
 L9C7B:
@@ -2148,7 +2161,7 @@ L9CA8:	MOV	L8F07, R2	; 9CA8	LD DE,($8F07)	current zone high pos
 	CMP	R3, #260	; 9CB4	CP $B0	
 	BLO	L9CC3		; 9CB6	JP C,$9CC3	
 ; Мы вышли из этой зоны, переходим к другой
-L9CB9:	CALL	L92CE		; 9CB9	CALL $92CE	Prepare objects
+L9CB9:	CALL	L92CE		; 9CB9	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; 9CBC	CALL $95EF	Show the screen
 	MOV	L8F01, R4	; 9CBF	LD IX,($8F01)	object table address
 L9CC3:	MOVB	10(R4), R0	; 9CC3	LD A,(IX+$08)	get movement flags
@@ -2221,11 +2234,11 @@ L9D29:	DEC	R0		; 9D29	DEC A
 	MOVB	(R4), R5	; 9D38	ADD A,(IX+$00)	
 	ADD	R5, R0
 	BIC	#177400, R0
-				; 9D3B	INC L	
+				; 9D3B	INC L		HL points to (+$01)
 	MOVB	(R3)+, R2	; 9D3C	LD E,(HL)	
-	BIC	#177400, R2	; 9D3D	INC L	
+	BIC	#177400, R2	; 9D3D	INC L		HL points to (+$02)
 	SWAB	R2
-	BISB	(R3), R2	; 9D3E	LD D,(HL)	DE = object position
+	BISB	(R3), R2	; 9D3E	LD D,(HL)	DE = object position change
 	SWAB	R2
 	MOV	R3, LA039	; 9D3F	LD ($A039),HL	save HL
 	MOVB	2(R4), R3	; 9D42	LD L,(IX+$01)	
@@ -2243,11 +2256,11 @@ L9D53:	SUB	#7, R0		; 9D53	SUB $07
 				; 9D5B	AND A	
 	SUB	R2, R3		; 9D5C	SBC HL,DE	
 				; 9D5E	LD A,H	
-	CMP	R3, #1000	; 9D5F	CP $02	
+	CMP	R3, #512.	; 9D5F	CP $02	
 	BLO	L9D69		; 9D61	JP C,$9D69	
 	MOV	#14., R0	; 9D64	LD A,$0E	
 	JMP	L9E62		; 9D66	JP $9E62	
-L9D69:	ADD	R2, R3		; 9D69	ADD HL,DE
+L9D69:	ADD	R2, R3		; 9D69	ADD HL,DE	
 				; 9D6A	LD DE,$FFF9	-7
 	SUB	#7, R3		; 9D6D	ADD HL,DE	
 	MOV	R3, R1		; 9D6E	LD B,H	
@@ -2261,7 +2274,7 @@ L9D73:	MOVB	(R3), R0	; 9D73	LD A,(HL)
 	JMP	L9E2B
 1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	end of table => jump
 L9D7B:				; 9D7B	LD DE,$0010	
-	ADD	#16., R3	; 9D7E	ADD HL,DE	HL points to next record
+	ADD	#16., R3	; 9D7E	ADD HL,DE	next record by HL
 	BR	L9D73		; 9D7F	JP $9D73	continue by HL
 L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	#7, R0		; 9D84	ADD A,$07	
@@ -2272,9 +2285,9 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	SWAB	R3
 	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	save object position
 	MOV	LA039, R3	; 9D93	LD HL,($A039)	restore HL
-	INC	R3		; 9D96	INC L	
-	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	
-	BIC	#177400, R0	; 9D98	INC L	
+	INC	R3		; 9D96	INC L		HL points to (+$03)
+	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	horz offset change
+	BIC	#177400, R0	; 9D98	INC L		HL points to (+$04)
 	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	add horz offset (bits 2-3 only)
 	ADD	R5, R0
 	BIC	#177400, R0
@@ -2285,20 +2298,20 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	#16., R0	; 9DA4	ADD A,$10	
 	BR	L9DAB		; 9DA6	JP $9DAB	
 L9DA9:	SUB	#16., R0	; 9DA9	SUB $10	
-L9DAB:	INC	R3		; 9DAB	INC L	
-	INC	R3		; 9DAC	INC L	
+L9DAB:	INC	R3		; 9DAB	INC L		HL points to (+$05)
+	INC	R3		; 9DAC	INC L		HL points to (+$06)
 L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	save horz offset
 	MOVB	(R3)+, R2	; 9DB0	LD E,(HL)	
-	BIC	#177400, R2	; 9DB1	INC L	
+	BIC	#177400, R2	; 9DB1	INC L		HL points to (+$07)
 	SWAB	R2
-	BISB	(R3), R2	; 9DB2	LD D,(HL)	DE = ??
+	BISB	(R3), R2	; 9DB2	LD D,(HL)	DE = offset change
 	SWAB	R2
 	MOVB	4(R4), R3	; 9DB3	LD L,(IX+$03)	
 	BIC	#177400, R3
 	SWAB	R3
-	BISB	3(R4), R3	; 9DB6	LD H,(IX+$04)	
+	BISB	3(R4), R3	; 9DB6	LD H,(IX+$04)	HL = object offset
 	ADD	R2, R3		; 9DB9	ADD HL,DE	
-	MOVB	R3, 3(R4)	; 9DBA	LD (IX+$03),L	
+	MOVB	R3, 3(R4)	; 9DBA	LD (IX+$03),L	save object offset
 	SWAB	R3
 	MOVB	R3, 4(R4)	; 9DBD	LD (IX+$04),H	
 	MOVB	6(R4), R0	; 9DC0	LD A,(IX+$06)	movement pattern
@@ -2956,7 +2969,7 @@ LA291:
 ; Prepare screen and tables
 	CALL	LA3D3		; A29C	CALL $A3D3	Prepare screen and indicators
 	CALL	L9423		; A29F	CALL $9423	Preparing objects tables
-	CALL	L92CE		; A2A2	CALL $92CE	Prepare objects
+	CALL	L92CE		; A2A2	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; A2A5	CALL $95EF	Show the screen
 	MOV	#377, L8A90	; A2A8	LD A,$FF	table ending marker
 				; A2AA	LD ($8A90),A	
@@ -3056,7 +3069,7 @@ LA350:	PUSH	R1		; A350	PUSH BC
 	CALL	LA11B		; A354	CALL $A11B	Objects logic, perform the action
 	CALL	L9C7B		; A357	CALL $9C7B	Process object movement
 	CALL	L985A		; A35A	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
-	CALL	L9A9B		; A35D	CALL $9A9B	Draw the shadow screen on the real screen
+	CALL	L9A9B		; A35D	CALL $9A9B	Draw the shadow screen on the real screen, using draw markers
 	POP	R1		; A360	POP BC	
 	SOB	R1, LA350	; A361	DJNZ $A350	
 	MOVB	<L8A00+7>, R0	; A363	LD A,($8A07)	Main Vorton direction 0..7
@@ -3066,9 +3079,9 @@ LA350:	PUSH	R1		; A350	PUSH BC
 ; Routine: DEMO MODE
 LA367:
 	CALL	LA291		; A367	CALL $A291	Prepare tables and show the starting animation
-	BR	LA372		; A36A	JR $A372	
+	BR	LA372		; A36A	JR $A372	jump into the loop
 ; DEMO mode loop by zones
-LA36C:	CALL	L92CE		; A36C	CALL $92CE	Prepare objects
+LA36C:	CALL	L92CE		; A36C	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; A36F	CALL $95EF	Show the screen
 LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
 	CALL	LB890		; A375	CALL $B890	Print Text
@@ -3082,31 +3095,32 @@ LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	RETURN			; A383	AND $1F		|  yes => exit DEMO
 1$:				; A385	RET NZ	        |
 	SOB	R1, LA37A	; A386	DJNZ $A37A      repeat
-	MOVB	L8F00, R0	; A388	LD A,($8F00)	Zone number?
-	CMPB	R0, #31.	; A38B	CP $1F		
-	BHIS	LA3A8		; A38D	JR NC,$A3A8	=> end of DEMO
+	MOVB	L8F00, R0	; A388	LD A,($8F00)	Zone number
+	CMPB	R0, #31.	; A38B	CP $1F		< 31. ?
+	BHIS	LA3A8		; A38D	JR NC,$A3A8	no => end of DEMO
 	MOV	#<L8A40+8.>, R3	; A38F	LD HL,$8A48	Object record #4 movement
 	CLRB	(R3)		; A392	LD (HL),$00	stop
 	MOV	L8F01, R3	; A394	LD HL,($8F01)	object table address
-	MOVB	#376, (R3)+	; A397	LD (HL),$FE	mark the record as empty
-				; A399	INC L		
+	MOVB	#376, (R3)+	; A397	LD (HL),$FE	mark record to skip
+				; A399	INC L		HL points to (+$01)
 	MOVB	(R3)+, R2	; A39A	LD E,(HL)	
-	BIC	#177400, R2	; A39B	INC L	
+	BIC	#177400, R2	; A39B	INC L		HL points to (+$02)
 	SWAB	R2
-	BISB	(R3), R2	; A39C	LD D,(HL)	
+	BISB	(R3), R2	; A39C	LD D,(HL)	DE = object position
 	SWAB	R2
 				; A39D	EX DE,HL	
 				; A39E	LD BC,$00B0	
 	ADD	#260, R2	; A3A1	ADD HL,BC	
-				; A3A2	EX DE,HL	
+				; A3A2	EX DE,HL	DE = obj pos + 176.
 	SWAB	R2
-	MOVB	R2, (R3)	; A3A3	LD (HL),D	
+	MOVB	R2, (R3)	; A3A3	LD (HL),D	save object position
 	DEC	R3		; A3A4	DEC L	
 	SWAB	R2
 	MOVB	R2, (R3)	; A3A5	LD (HL),E	
 	BR	LA36C		; A3A6	JR $A36C	repeat in the loop by zones
 ; End of the DEMO MODE: the game screen painted red, and the sign showed at the center
 LA3A8:
+	;TODO: Paint the real screen with red
 		; A3A8	LD HL,$5800	attributes
 		; A3AB	LD C,$12	
 		; A3AD	LD B,$20	
@@ -3274,10 +3288,10 @@ LA4D6:	.WORD	113717
 	.BYTE	131,312,143,137,115,127,125,144,115,137,136,115,147,131,144,130,115,131,144,120,312,376 ; SO GET ON WITH IT!
 	.EVEN
 
-; Отрисовка площадки-препятствия
+; Draw flat blockers on the second shadow screen, then copy to the first shadow screen
 LA546:
 	MOV	#LA8D5, R3	; A546	LD HL,$A8D5	
-	CLRB	(R3)		; A549	LD (HL),$00	
+	CLRB	(R3)		; A549	LD (HL),$00	clear flag
 	MOV	#L8A90, R4	; A54B	LD IX,$8A90	objects table
 LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)	
 	CMPB	R0, #376	; A552	CP $FE	
@@ -3307,7 +3321,7 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	MOVB	4(R4), R1	; A57F	LD C,(IX+$03)	
 	BIC	#177400, R1
 	SWAB	R1
-	BISB	3(R4), R1	; A582	LD B,(IX+$04)	BC = ??
+	BISB	3(R4), R1	; A582	LD B,(IX+$04)	BC = object offset
 				; A585	EX DE,HL	
 	MOV	L8F03, R2	; A586	LD HL,($8F03)	current zone offset
 	ADD	R1, R2		; A589	ADD HL,BC	
@@ -3335,33 +3349,33 @@ LA5AD:	POP	R3		; A5AD	POP HL
 				; A5BD	ADD HL,HL	
 				; A5BE	ADD HL,HL	
 				; A5BF	LD A,E	
-	BIC	#177740, R0	; A5C0	AND $1F	
+	BIC	#177740, R0	; A5C0	AND $1F		offset within a single line -- 0..31.
 				; A5C2	LD E,A	
 	BIS	R0, R3		; A5C3	LD D,$FD	
-	ADD	#LFD00, R3	; A5C5	ADD HL,DE	
+	ADD	#LFD00, R3	; A5C5	ADD HL,DE	адрес начала области флагов отрисовки
 				; A5C6	LD DE,$FFDE	-34.
-	MOV	#1, R0		; A5C9	LD A,$01	
-	MOV	#4, R1		; A5CB	LD B,$04	
-LA5CD:	MOVB	R0, (R3)+	; A5CD	LD (HL),A	
-				; A5CE	INC HL	
-	MOVB	R0, (R3)+	; A5CF	LD (HL),A	
-				; A5D0	INC HL	
-	MOVB	R0, (R3)	; A5D1	LD (HL),A	
-	SUB	#34., R3	; A5D2	ADD HL,DE	to previous line
-	SOB	R1, LA5CD	; A5D3	DJNZ $A5CD
+	MOV	#1, R0		; A5C9	LD A,$01	draw marker
+	MOV	#4, R1		; A5CB	LD B,$04	спрайт занимает 3 или 4 знако-строки
+LA5CD:	MOVB	R0, (R3)+	; A5CD	LD (HL),A	<  отмечаем к отрисовке 3 знакоместа
+				; A5CE	INC HL		|
+	MOVB	R0, (R3)+	; A5CF	LD (HL),A	|
+				; A5D0	INC HL		|
+	MOVB	R0, (R3)	; A5D1	LD (HL),A	|
+	SUB	#34., R3	; A5D2	ADD HL,DE	|  to previous line
+	SOB	R1, LA5CD	; A5D3	DJNZ $A5CD	repeat
 ;	
 	MOV	#LA8D5, R3	; A5D5	LD HL,$A8D5	
-	MOVB	#1, (R3)	; A5D8	LD (HL),$01	
+	MOVB	#1, (R3)	; A5D8	LD (HL),$01	mark that we drawn a blocker
 LA5DA:				; A5DA	LD DE,$0010	
 	ADD	#16., R4	; A5DD	ADD IX,DE	
 	BR	LA54F		; A5DF	JP $A54F	
 ;
 LA5E2:	MOVB	LA8D5, R0	; A5E2	LD A,($A8D5)	
-				; A5E5	AND A	
-	BEQ	LA616		; A5E6	RET Z	
+				; A5E5	AND A		did we draw a blocker?
+	BEQ	LA616		; A5E6	RET Z		no => return
 	MOV	#LE900, R3	; A5E7	LD HL,$E900	from the second shadow screen
 	MOV	#<LD900+5>, R2	; A5EA	LD DE,$D905	to the first one
-	MOV	#4096., R1	; A5ED	LD BC,$1000	
+	MOV	#4096., R1	; A5ED	LD BC,$1000	4096. bytes
 $1:	MOVB	(R3)+, (R2)+	; A5F0	LDIR	        copy
 	SOB	R1, $1
 		; A5F2	LD C,$0C	
@@ -3412,7 +3426,7 @@ LA638:				; A638	LD DE,$0010	|
 	CLR	R0		; A645	XOR A		action = none
 	CALL	LA34D		; A646	CALL $A34D	do the action
 	MOV	#L8A50, R3	; A649	LD HL,$8A50	Lasertron
-	MOV	R3, L8F01	; A64C	LD ($8F01),HL	object table address
+	MOV	R3, L8F01	; A64C	LD ($8F01),HL	set object table address
 	MOV	#15., R1	; A64F	LD B,$0F	loop counter = 15.
 	CLR	R0		; A651	XOR A		action = none
 	CALL	LA34D		; A652	CALL $A34D	do the action
@@ -3442,7 +3456,7 @@ LA8C5:
 	CALL	LA1F8		; A8C8	CALL $A1F8	DEMO mode objects logic
 	CALL	L9C7B		; A8CB	CALL $9C7B	Process object movement
 	CALL	L985A		; A8CE	CALL $985A	Prepare table 8D52 (sort out objects by depth), and draw the objects
-	CALL	L9A9B		; A8D1	CALL $9A9B	Draw the shadow screen on the real screen
+	CALL	L9A9B		; A8D1	CALL $9A9B	Draw the shadow screen on the real screen, using draw markers
 	RETURN			; A8D4	RET
 
 LA8D5:	.BYTE	0
