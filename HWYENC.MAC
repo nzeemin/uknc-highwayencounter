@@ -61,7 +61,7 @@ RETN:	RETURN
 WTKEY:	TSTB	@#177560
 	BPL	WTKEY
 	CLR	R0
-	MOVB	@#177562,R0	; символ в R0
+	MOVB	@#177562, R0	; символ в R0
 	CMPB	R0, #33
 	BNE	RETN
 ESCKEY:	TSTB	@#177560
@@ -71,6 +71,7 @@ ESCKEY:	TSTB	@#177560
 ; Подпрограмма: Получение символа с клавиатуры: флаг Z=0 = есть символ, R0 = полученный символ
 GETKEY:	TSTB	@#177560	; есть символ?
 	BPL	10$		; нет символа => выходим
+	MOVB	@#177562, R0	; символ в R0
 	CMPB	R0, #33		; Esc ?
 	BEQ	ESCKEY		
 	RETURN
@@ -1440,7 +1441,10 @@ L982A:	INC	R3		; 982A	INC L		NOTE: first byte replaced with word
 	MOV	R2, R3		; 983A	ADD HL,DE	
 				; 983B	LD E,L	
 				; 983C	LD D,H	
-				; 983D	LD BC,$F005	-4091.
+	CMP	R2, #LFF29 ;DEBUG вышли за границу экрана?
+	BLO	1$	   ;DEBUG нет => переходим
+	HALT
+1$:				; 983D	LD BC,$F005	-4091.
 	SUB	#4091., R3	; 9840	ADD HL,BC	minus distance between the screens
 	MOV	#24., R0	; 9841	LD A,$18	24. = sprite height
 	MOV	#35., R1
@@ -1584,7 +1588,10 @@ L98E2:	INC	R3		; 98E2	INC L		NOTE: первый байт таблицы заменён на слово
 	ADD	R1, R3		; 9910	ADD HL,BC	
 	MOV	R3, R1		; 9911	LD C,L	
 				; 9912	LD B,H		BC = address where to draw the sprite
-	PUSH	R3		; 9913	EX (SP),HL	restore HL and set value on stack
+	CMP	R1, #LFF29 ;DEBUG вышли за границу экрана?
+	BLO	1$	   ;DEBUG нет => переходим
+	HALT
+1$:	PUSH	R3		; 9913	EX (SP),HL	restore HL and set value on stack
 	MOV	R5, R3
 	CALL	(R3)		; 9914	JP (HL)		Draw the sprite
 ;
@@ -2662,8 +2669,7 @@ LA020:	CALL	LA270		; A020	CALL $A270	Get next random number
 	ADD	#7, R0		; A024	AND $07		value 0..7
 	MOVB	R0, 14(R4)	; A026	LD (IX+$0C),A	
 	JMP	L9DC8		; A029	JP $9DC8	Random movement with limitations
-; Cont.point: 180 degree rotation: Moving Star object
-; IX=8B20,8B10 in Zone 27, IX=8AE0,8AD0 in Zone 27
+; Cont.point: 180 degree rotation: Star object hit something
 LA02C:	MOVB	7(R4), R0	; A02C	LD A,(IX+$07)	get direction
 	ADD	#4, R0		; A02F	ADD A,$04	180 degree rotation
 	BIC	#177410, R0	; A031	RES 3,A	
@@ -2929,17 +2935,18 @@ LA270:
 	MOV	L5C76, R2	; A270	LD DE,($5C76)	; Read RND SEED variable
 	MOV	R2, R3		; A274	LD H,E	
 	SWAB	R3
-	BIC	#177400, R3
+	BIC	#377, R3
 	ADD	#375, R3	; A275	LD L,$FD	
-	MOVB	R2, R0		; A277	LD A,D	
+	MOV	R2, R0		; A277	LD A,D	
+	SWAB	R0
 	BIC	#177400, R0	; A278	OR A	
 	SUB	R2, R3		; A279	SBC HL,DE	
 	SBCB	R0		; A27B	SBC A,$00	
 	SUB	R2, R3		; A27D	SBC HL,DE	
 	SBCB	R0		; A27F	SBC A,$00	
 				; A281	LD E,A	
-				; A282	LD D,$00	
-	SUB	R1, R3		; A284	SBC HL,DE	
+	BIC	#177400, R0	; A282	LD D,$00	
+	SUB	R0, R3		; A284	SBC HL,DE	
 	BHIS	LA289		; A286	JR NC,$A289	
 	INC	R3		; A288	INC HL	
 LA289:	MOV	R3, L5C76	; A289	LD ($5C76),HL	; Write RND SEED variable
@@ -3326,7 +3333,10 @@ LA54F:	MOVB	(R4), R0	; A54F	LD A,(IX+$00)
 	ADD	R1, R2		; A589	ADD HL,BC	
 	MOV	R2, R1		; A58A	LD C,L	
 				; A58B	LD B,H		BC = address where to draw the sprite
-	PUSH	R2		; A58C	PUSH HL	
+	CMP	R1, #LFF29 ;DEBUG вышли за границу экрана?
+	BLO	1$	   ;DEBUG нет => переходим
+	HALT
+1$:	PUSH	R2		; A58C	PUSH HL	
 				; A58D	EX DE,HL	
 	MOV	#LBBC0, R2	; A58E	LD DE,$BBC0	Sprite #5 flat blocker
 	CALL	(R3)		; A591	JP (HL)	
@@ -3495,26 +3505,34 @@ LB0E7:		; B0E7	XOR A
 LB13C:
 	;TODO
 
-1$:	CALL	WTKEY ;STUB
-	CMP	R0, #065		; '5' ?
+; Wait for a key and roll the RND SEED while waiting
+10$:	CALL	GETKEY
+	BNE	1$
+	INC	L5C76		; RND SEED
+	BR	10$
+1$:
+	CMP	R0, #065	; '5' ?
 	BNE	2$
+; Show Info Screen
 	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
 	CALL	PRINT
 	CALL	PAUSE		; подождём пока очистится экран
 	JMP	LB4D0		; B1BC	JP $B4D0	Show Info Screen
-2$:	CMP	R0, #066		; '6' ?
+2$:	CMP	R0, #066	; '6' ?
 	BNE	3$
+; Switch to DEMO mode
 	CALL	LA367		; B17C	CALL $8F79	JP A367  DEMO MODE
 	BR	LB0DE		; B17F	JP $B0E7	back to start point
-3$:	CMP	R0, #067		; '7' ?
+3$:	CMP	R0, #067	; '7' ?
 	BNE	4$
+; Switch to GAME mode
 	CALL	L90F2		; B18C	CALL $90F2	GAME MODE
 	CALL	WTKEY ;STUB
 	;TODO
         BR	LB0DE 		; B1AA	JP $B0E7	back to start point
-4$:	CMP	R0, #060		; '0' ?
+4$:	CMP	R0, #060	; '0' ?
 	BNE	5$
-	JMP	FINISH			; Finish and exit the app
+	JMP	FINISH		; Finish and exit the app
 5$:
 	BR	LB13C		; B200	JP $B13C
 
