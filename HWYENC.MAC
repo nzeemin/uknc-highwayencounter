@@ -469,6 +469,7 @@ L8D6A:	.WORD	000, 0
 ;   +$01,+$02 -- object position change
 ;   +$03      -- horz offset change
 ;   +$06,+$07 -- offset change
+;               $00 $01 $02 $03 $04 $05 $06 $07  $00 $01 $02 $03 $04 $05 $06 $07
 L8E00:	.BYTE	000,002,000,004,340,377,341,377, 377,001,000,004,000,000,001,000
 	.BYTE	376,000,000,004,040,000,041,000, 377,377,377,000,040,000,040,000
 	.BYTE	000,376,377,374,040,000,037,000, 001,377,377,374,000,000,377,377
@@ -546,21 +547,21 @@ L8F4A:	.BYTE	000,000, 030,026, 050,054, 060,102, 070,130, 100,156, 110,204, 120,
 L8FF0:	.BYTE	001,000, 001,004, 001,002, 001,006, 003,000, 003,004, 000,002, 000,006
 
 ; Continuation points, see 9E6C
-L9000:	.WORD	L9ED7,L9FDF,L9F20,L9F20,L9F20,L9F20,L9F20,L9ED7
-	.WORD	L9ED7,L9E6D,L9EBF,L9FEF,L9F02,L9F54,L9F54,L9F54
-	.WORD	L9FEF,L9F02,LA001,L9F7D,L9F02,L9EBB,L9FB5,L9F06
-	.WORD	LA008,LA008,LA008,LA008,LA008,LA008,LA008,LA008
-	.WORD	LA008,L9FB5,L9F06,LA014,LA014,LA014,LA014,L9F02
-	.WORD	LA014,LA014,LA014,LA014,L9FB5,L9F06,LA020,LA020
-	.WORD	LA020,LA020,LA020,LA020,LA020,LA020,LA020,L9FB5
-	.WORD	L9FDF,LA02C,LA02C,LA02C,LA02C,L9F02,LA02C,LA02C
-	.WORD	LA02C,LA02C,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12
-	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12
-	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12
-	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12
-	.WORD	L9E12,L9E12,L9E12,L9E12,L9F02,L9E12,L9E12,L9E12
-	.WORD	L9E12,L9F02,L9E12,L9E12,L9F02,L9E12,L9E12,L9F02	
-	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12
+L9000:	.WORD	L9ED7,L9FDF,L9F20,L9F20,L9F20,L9F20,L9F20,L9ED7  ; 000
+	.WORD	L9ED7,L9E6D,L9EBF,L9FEF,L9F02,L9F54,L9F54,L9F54  ; 020
+	.WORD	L9FEF,L9F02,LA001,L9F7D,L9F02,L9EBB,L9FB5,L9F06  ; 040
+	.WORD	LA008,LA008,LA008,LA008,LA008,LA008,LA008,LA008  ; 060
+	.WORD	LA008,L9FB5,L9F06,LA014,LA014,LA014,LA014,L9F02  ; 100
+	.WORD	LA014,LA014,LA014,LA014,L9FB5,L9F06,LA020,LA020  ; 120
+	.WORD	LA020,LA020,LA020,LA020,LA020,LA020,LA020,L9FB5  ; 140
+	.WORD	L9FDF,LA02C,LA02C,LA02C,LA02C,L9F02,LA02C,LA02C  ; 160
+	.WORD	LA02C,LA02C,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12  ; 200
+	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12  ; 220
+	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12  ; 240
+	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12  ; 260
+	.WORD	L9E12,L9E12,L9E12,L9E12,L9F02,L9E12,L9E12,L9E12  ; 300
+	.WORD	L9E12,L9F02,L9E12,L9E12,L9F02,L9E12,L9E12,L9F02	 ; 320
+	.WORD	L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12,L9E12  ; 340
 	.WORD	L9E8E
 
 ;------------------------------------------------------------------------------
@@ -2229,17 +2230,17 @@ L9D29:	DEC	R0		; 9D29	DEC A
 	SWAB	R2
 	BISB	(R3), R2	; 9D3E	LD D,(HL)	DE = object position change
 	SWAB	R2
-	MOV	R3, LA039	; 9D3F	LD ($A039),HL	save HL
+	MOV	R3, LA039	; 9D3F	LD ($A039),HL	save HL, points to (+$02) in 8E00 table
 	MOVB	2(R4), R3	; 9D42	LD L,(IX+$01)	
 	BIC	#177400, R3
 	SWAB	R3
 	BISB	1(R4), R3	; 9D45	LD H,(IX+$02)	HL = IX object position
-	ADD	R2, R3		; 9D48	ADD HL,DE	
-	CMPB	R0, #111	; 9D49	CP $49	
+	ADD	R2, R3		; 9D48	ADD HL,DE	HL = IX obj pos + pos change
+	CMPB	R0, #111	; 9D49	CP $49		< 73. ?
 	BLO	L9D53		; 9D4B	JP C,$9D53
 	MOV	#14., R0	; 9D4E	LD A,$0E	
-	JMP	L9E62		; 9D50	JP $9E62	
-L9D53:	SUB	#7, R0		; 9D53	SUB $07	
+	JMP	L9E62		; 9D50	JP $9E62	jump to collision processing
+L9D53:	SUB	#7, R0		; 9D53	SUB $07		-7
 	MOV	R0, R5		; 9D55	LD IYl,A	save A
 	MOV	L8F05, R2	; 9D57	LD DE,($8F05)	current zone low pos
 				; 9D5B	AND A	
@@ -2248,7 +2249,7 @@ L9D53:	SUB	#7, R0		; 9D53	SUB $07
 	CMP	R3, #512.	; 9D5F	CP $02	
 	BLO	L9D69		; 9D61	JP C,$9D69	
 	MOV	#14., R0	; 9D64	LD A,$0E	
-	JMP	L9E62		; 9D66	JP $9E62	
+	JMP	L9E62		; 9D66	JP $9E62	jump to collision processing
 L9D69:	ADD	R2, R3		; 9D69	ADD HL,DE	restore HL value
 				; 9D6A	LD DE,$FFF9	-7
 	SUB	#7, R3		; 9D6D	ADD HL,DE	
@@ -2262,10 +2263,11 @@ L9D73:	MOVB	(R3), R0	; 9D73	LD A,(HL)
 	CMPB	R0, #376	; 9D74	CP $FE		empty record?
 	BHIS	1$		; 9D76	JP C,$9E2B	no => jump
 	JMP	L9E2B
-1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	end of table => jump
+1$:	BNE	L9D82		; 9D79	JR NZ,$9D82	end of table by HL => jump
 L9D7B:				; 9D7B	LD DE,$0010	
 	ADD	#16., R3	; 9D7E	ADD HL,DE	next record by HL
 	BR	L9D73		; 9D7F	JP $9D73	continue by HL
+; End of table by HL
 L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	#7, R0		; 9D84	ADD A,$07	
 	MOVB	R0, (R4)	; 9D86	LD (IX+$00),A	
@@ -2273,21 +2275,21 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	R1, R3		; 9D8C	ADD HL,BC	
 	MOVB	R3, 1(R4)	; 9D8D	LD (IX+$01),L	
 	SWAB	R3
-	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	save object position
-	MOV	LA039, R3	; 9D93	LD HL,($A039)	restore HL
+	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	save new object position
+	MOV	LA039, R3	; 9D93	LD HL,($A039)	restore HL, points to (+$02) in 8E00 table
 	INC	R3		; 9D96	INC L		HL points to (+$03)
 	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	horz offset change
 	BIC	#177400, R0	; 9D98	INC L		HL points to (+$04)
 	MOVB	11(R4), R5	; 9D99	ADD A,(IX+$09)	add horz offset (bits 2-3 only)
 	ADD	R5, R0
 	BIC	#177400, R0
-	CMPB	R0, #13.	; 9D9C	CP $0D	
+	CMPB	R0, #13.	; 9D9C	CP $0D		< 13. ?
 	BLO	L9DAD		; 9D9E	JR C,$9DAD	
-	CMPB	R0, #128.	; 9DA0	CP $80	
+	CMPB	R0, #128.	; 9DA0	CP $80		< 128. ?
 	BLO	L9DA9		; 9DA2	JR C,$9DA9	
-	ADD	#16., R0	; 9DA4	ADD A,$10	
+	ADD	#16., R0	; 9DA4	ADD A,$10	+16.
 	BR	L9DAB		; 9DA6	JP $9DAB	
-L9DA9:	SUB	#16., R0	; 9DA9	SUB $10	
+L9DA9:	SUB	#16., R0	; 9DA9	SUB $10		-16.
 L9DAB:	INC	R3		; 9DAB	INC L		HL points to (+$05)
 	INC	R3		; 9DAC	INC L		HL points to (+$06)
 L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	save horz offset
@@ -2304,7 +2306,7 @@ L9DAD:	MOVB	R0, 11(R4)	; 9DAD	LD (IX+$09),A	save horz offset
 	MOVB	R3, 3(R4)	; 9DBA	LD (IX+$03),L	save object offset
 	SWAB	R3
 	MOVB	R3, 4(R4)	; 9DBD	LD (IX+$04),H	
-	MOVB	6(R4), R0	; 9DC0	LD A,(IX+$06)	movement pattern
+	MOVB	6(R4), R0	; 9DC0	LD A,(IX+$06)	get IX movement pattern
 	BIC	#177400, R0
 	CMPB	R0, #4		; 9DC3	CP $04	
 	BNE	L9DE0		; 9DC5	JP NZ,$9DE0
@@ -2363,7 +2365,7 @@ L9E1A:				; 9E1A	LD DE,$0010
 	JMP	L9CCD
 1$:	BEQ	L9E1A		; 9E27	JP Z,$9E1A	(IX+$00) == $FE ? => next record by IX
 	RETURN			; 9E2A	RET		(IX+$00) == $FF => end of table, return
-; HL = non-empty object record to process
+; HL = non-empty object record to process vs IX record
 L9E2B:	SUB	R5, R0		; 9E2B	SUB IYl		use stored A
 	CMPB	R0, #15.	; 9E2D	CP $0F	
 	BLO	1$		; 9E2F	JP NC,$9D7B	=> next record by HL
@@ -2372,7 +2374,7 @@ L9E2B:	SUB	R5, R0		; 9E2B	SUB IYl		use stored A
 	MOVB	(R3)+, R2	; 9E33	LD E,(HL)	
 	BIC	#177400, R2	; 9E34	INC L		HL points to (+$02)
 	SWAB	R2
-	BISB	(R3), R2	; 9E35	LD D,(HL)	DE = object position
+	BISB	(R3), R2	; 9E35	LD D,(HL)	DE = HL object position
 	SWAB	R2
 				; 9E36	EX DE,HL	
 				; 9E37	AND A	
@@ -2396,17 +2398,18 @@ L9E4C:	MOV	R4, R0		; 9E4C	LD A,IXl
 				; 9E53	LD A,IXh	
 				; 9E55	CP H	
 	BEQ	L9E45		; 9E56	JR Z,$9E45	yes => next record by HL
+; IX and HL are not the same record
 	MOV	R3, R2		; 9E58	LD A,$04	
 	ADD	#4, R3		; 9E5A	ADD A,L		
 				; 9E5B	EX DE,HL	DE points to (+$02)
 				; 9E5C	LD L,A	
 				; 9E5D	LD H,D		HL points to (+$06)
-	MOVB	(R3), R0	; 9E5E	LD A,(HL)	movement pattern
+	MOVB	(R3), R0	; 9E5E	LD A,(HL)	get HL movement pattern
 	BIC	#177420, R0	; 9E5F	RES 4,A	
 	ADD	R0, R0		; 9E61	ADD A,A	
-L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	get continuation point number
+L9E62:	MOVB	13(R4), R3	; 9E62	ADD A,(IX+$0B)	add IX base continuation point number
 	BIC	#177400, R3
-	ADD	R0, R3		; 9E65	LD L,A		now L should be 0..240.
+	ADD	R3, R0		; 9E65	LD L,A		now L should be 0..240.
 	BIC	#177401, R0
 	ADD	#L9000, R0	; 9E66	LD H,$90	start of continuation points table = $9000
 	MOV	(R0), R3	; 9E68	LD A,(HL)	get the continuation point address
@@ -2616,10 +2619,10 @@ L9FD0:	MOVB	#200, (R3)	; 9FD0	LD (HL),$80
 				; 9FD7	LD HL,$8F15	
 	BISB	#100, L8F15	; 9FDA	SET 6,(HL)	
 	JMP	L9E1A		; 9FDC	JP $9E1A	next record by IX
-; Cont.point
+; Cont.point: if IX is Main Vorton then nothing; else delete HL object
 L9FDF:	MOV	R2, R3		; 9FDF	EX DE,HL	HL points to (+$02)
 	MOVB	12(R4), R0	; 9FE0	LD A,(IX+$0A)	get sprite index
-	CMPB	R0, #14.	; 9FE3	CP $0E		is it Vorton?
+	CMPB	R0, #016	; 9FE3	CP $0E		IX is Main Vorton?
 	BNE	L9FE8		; 9FE5	JP Z,$9E45	yes => next record by HL
 	JMP	L9E45
 ; IX is not Vorton record
@@ -2842,7 +2845,7 @@ LA1F8:
 	MOV	#L8F0E, R3	; A1F8	LD HL,$8F0E	addr of Main Vorton sprite phase
 	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	object table address
 	MOVB	7(R4), R0	; A1FF	LD A,(IX+$07)	get direction 0..7
-	ADD	R0, R0		; A202	ADD A,A	
+	ADD	R0, R0		; A202	ADD A,A		sprite phase copying direction
 	MOVB	R0, (R3)	; A203	LD (HL),A	save Main Vorton sprite phase
 	MOV	#LA28F, R3	; A204	LD HL,$A28F	
 	CLR	R0		; A207	XOR A	
