@@ -2665,10 +2665,10 @@ LA014:	CALL	LA270		; A014	CALL $A270	Get next random number
 	BIC	#177770, R0	; A018	AND $07		value 0..7
 	MOVB	R0, 7(R4)	; A01A	LD (IX+$07),A	set direction
 	JMP	L9E1A		; A01D	JP $9E1A	next record by IX
-; Cont.point
+; Cont.point: Frog
 LA020:	CALL	LA270		; A020	CALL $A270	Get next random number
 	MOV	R3, R0		; A023	LD A,L	
-	ADD	#7, R0		; A024	AND $07		value 0..7
+	BIC	#177770, R0	; A024	AND $07		value 0..7
 	MOVB	R0, 14(R4)	; A026	LD (IX+$0C),A	
 	JMP	L9DC8		; A029	JP $9DC8	Random movement with limitations
 ; Cont.point: 180 degree rotation: Star object hit something
