@@ -80,7 +80,14 @@ GETKEY:	TSTB	@#177560	; וסעü סטלגמכ?
 
 ;------------------------------------------------------------------------------
 
-	.=1400
+	.=1200
+
+SPRITE::
+.INCLUDE /SPRITE.MAC/
+
+;------------------------------------------------------------------------------
+
+	.=51400
 
 LD900:	.BLKB	704.
 ; Shadow screen, 24. char-lines, 24. * 8. lines, 32. * 24. * 8. = 6144. bytes
@@ -92,13 +99,6 @@ LFD00:	.BLKB	553.			; Drawing markers area
 LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.EVEN
-
-;------------------------------------------------------------------------------
-
-	.=24600
-
-SPRITE::
-.INCLUDE /SPRITE.MAC/
 
 
 ;------------------------------------------------------------------------------
@@ -125,10 +125,10 @@ L7A00:	; Table with sprite addresses
 ; Global objects table, 16. bytes per record, max 240. records
 ;   +$01,+$02 -- object position
 ;   +$03,+$04 -- this plus current zone offset ($8F03) gives address on the screen
-;   +$05 -- Base sprite number
-;   +$06 -- ?? movement pattern; 006 = Fire, 012 = Block, 026 = Flat blocker, 032 = Barrel
+;   +$05 -- base sprite number, index in 7A00 table
+;   +$06 -- movement pattern: 000 = Vorton, 006 = Fire, 012 = Block, 026 = Flat blocker, 032 = Barrel
 ;   +$07 -- direction, copied from (IX+$0ׁ) AND $07, values 0..7
-;   +$08 -- movement flags ?? 0 = stop, 1 = move
+;   +$08 -- movement flags ?? 0 = stop, 1 = move; bit 7 = 1: explosion
 ;   +$09 -- horz offset (bits 2-3 only)
 ;   +$0A -- offset from $8F00, where we have sprite number: 015,017,020,021,022,023
 ;   +$0B -- continuation point number from table $9000
@@ -2172,21 +2172,21 @@ L9CCD:	MOVB	10(R4), R0	; 9CCD	LD A,(IX+$08)	get movement flags
 	JMP	L9E1A
 1$:	BITB	#200, R0	; 9CD6	BIT 7,A	
 	BEQ	L9D29		; 9CD8	JP Z,$9D29	
-; (IX+$08) bit 7 = 1
-L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	sprite phase?
+; (IX+$08) bit 7 = 1 -- explosion?
+L9CDB:	MOVB	5(R4), R0	; 9CDB	LD A,(IX+$05)	base sprite number
 	BIC	#177400, R0
 	ADD	#8., R0		; 9CDE	ADD A,$08	
-	CMPB	R0, #220.	; 9CE0	CP $DC		< 220. ?
-	BLO	L9CEF		; 9CE2	JR C,$9CEF	
+	CMPB	R0, #334	; 9CE0	CP $DC		< 334 ?
+	BLO	L9CEF		; 9CE2	JR C,$9CEF	less => jump
 	MOVB	#376, (R4)	; 9CE4	LD (IX+$00),$FE	 mark the record as empty
 	BICB	#200, 10(R4)	; 9CE8	RES 7,(IX+$08)	alter movement flags
 	JMP	L9E1A		; 9CEC	JP $9E1A	next record by IX
-L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A	
+L9CEF:	MOVB	R0, 5(R4)	; 9CEF	LD (IX+$05),A	set base sprite number
 	MOV	#L8F15, R3	; 9CF2	LD HL,$8F15	
 	MOVB	6(R4), R0	; 9CF5	LD A,(IX+$06)	get movement pattern
 	BIC	#177420, R0	; 9CF8	RES 4,A	
-				; 9CFA	AND A	
-	BEQ	L9D0B		; 9CFB	JR Z,$9D0B	Vorton dies?
+				; 9CFA	AND A		is it Vorton?
+	BEQ	L9D0B		; 9CFB	JR Z,$9D0B	Vorton died => jump
 	CMPB	R0, #7		; 9CFD	CP $07	
 	BLO	L9D06		; 9CFF	JR C,$9D06	
 	BISB	#200, (R3)	; 9D01	SET 7,(HL)	
@@ -2282,7 +2282,7 @@ L9D82:	MOV	R5, R0		; 9D82	LD A,IYl	restore A
 	ADD	R1, R3		; 9D8C	ADD HL,BC	
 	MOVB	R3, 1(R4)	; 9D8D	LD (IX+$01),L	
 	SWAB	R3
-	BISB	R3, 2(R4)	; 9D90	LD (IX+$02),H	save new object position
+	MOVB	R3, 2(R4)	; 9D90	LD (IX+$02),H	save new object position
 	MOV	LA039, R3	; 9D93	LD HL,($A039)	restore HL, points to (+$02) in 8E00 table
 	INC	R3		; 9D96	INC L		HL points to (+$03)
 	MOVB	(R3)+, R0	; 9D97	LD A,(HL)	horz offset change
@@ -2603,6 +2603,8 @@ L9FA6:	MOVB	#200, (R3)	; 9FA6	LD (HL),$80
 	BISB	#200, L8F15	; 9FB0	SET 7,(HL)	
 	JMP	L9E1A		; 9FB2	JP $9E1A	next record by IX
 ; Cont.point
+; if (IX+$06) != 5 then mark IX to skip
+; turn HL record into explosion if not yet
 L9FB5:	MOVB	6(R4), R0	; 9FB5	LD A,(IX+$06)	get movement pattern
 	CMPB	R0, #5		; 9FB8	CP $05	
 	BEQ	L9FC1		; 9FBA	JP Z,$9FC1	
@@ -2611,18 +2613,18 @@ L9FC1:	MOV	R2, R3		; 9FC1	EX DE,HL	HL points to (+$02)
 				; 9FC2	INC L	
 				; 9FC3	INC L	
 	ADD	#3, R3		; 9FC4	INC L		HL points to (+$05)
-	MOVB	(R3), R0	; 9FC5	LD A,(HL)	
-	CMPB	R0, #200	; 9FC6	CP $80	
-	BLO	L9FD0		; 9FC8	JR C,$9FD0	
+	MOVB	(R3), R0	; 9FC5	LD A,(HL)	get base sprite number
+	CMPB	R0, #200	; 9FC6	CP $80		< 200 ? Exlposion starts from 200
+	BLO	L9FD0		; 9FC8	JR C,$9FD0	less => jump
 				; 9FCA	DEC L	
 				; 9FCB	DEC L	
 	SUB	#3, R3		; 9FCC	DEC L		HL points to (+$02)
 	JMP	L9E45		; 9FCD	JP $9E45	next record by HL
-L9FD0:	MOVB	#200, (R3)	; 9FD0	LD (HL),$80	
+L9FD0:	MOVB	#200, (R3)	; 9FD0	LD (HL),$80	base sprite = Explosion
 				; 9FD2	INC L	
 				; 9FD3	INC L	
 	ADD	#3, R3		; 9FD4	INC L		HL points to (+$08)
-	BISB	#200, (R3)	; 9FD5	SET 7,(HL)	alter movement flags
+	BISB	#200, (R3)	; 9FD5	SET 7,(HL)	set movement flags bit 7
 				; 9FD7	LD HL,$8F15	
 	BISB	#100, L8F15	; 9FDA	SET 6,(HL)	
 	JMP	L9E1A		; 9FDC	JP $9E1A	next record by IX
