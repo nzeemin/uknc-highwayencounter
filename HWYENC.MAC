@@ -510,9 +510,9 @@ L8F15:	.BYTE	0
 L8F16:	.BYTE	0	; Counter for Lasertron movement indicator
 L8F17:	.BYTE	206	; 
 L8F18:	.BYTE	226	; Low part of attribute address $5Axx
-L8F19:	.BYTE	326
+L8F19:	.BYTE	40	; Mission Time high counter
 L8F0B:	.WORD	0	; Address in 8D52 table; NOTE: Moved here for proper alignment of other fields
-L8F1A:	.WORD	6654	; Mission Time
+L8F1A:	.WORD	665	; Mission Time low counter
 L8F1C:	.BYTE	1	; Zone number? $01..$1F
 L8F1D:	.BLKB	5.
 L8F22:	.BYTE	0
@@ -533,9 +533,9 @@ L8F25:
 	.BYTE	0
 	.BYTE	206
 	.BYTE	226
-	.BYTE	326
+	.BYTE	40
 	.WORD	0
-	.WORD	6654
+	.WORD	665
 	.BYTE	001
 	.BYTE	000,000,000,000,000
 	.BYTE	000
@@ -646,39 +646,40 @@ L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
 	BIC	#177400, R0	; 9188	AND A	
 	BNE	L918C		; 9189	JP Z,$A617	
 	JMP	LA617
-L918C:	MOV	L8F1A, R3	; 918C	LD HL,($8F1A)	get Mission Time
+L918C:	MOV	L8F1A, R3	; 918C	LD HL,($8F1A)	get Mission Time low counter
 	DEC	R3		; 918F	DEC HL		time's ticking
 				; 9190	LD A,L	
 				; 9191	OR H	
 				; 9192	AND A	        time's out?
 	BNE	L91C3		; 9193	JR NZ,$91C3	no => jump
-; Time is out
-		; 9195	LD A,($8F19)	
-		; 9198	LD L,A	
-		; 9199	LD H,$50	Attributes?
-		; 919B	LD A,$77	
-		; 919D	CP (HL)	
-		; 919E	JR Z,$91B8	
-		; 91A0	LD A,L	
-		; 91A1	DEC A	
-		; 91A2	LD ($8F19),A	
-		; 91A5	XOR A	
-		; 91A6	LD B,$07	
-		; 91A8	LD (HL),A	
-		; 91A9	INC H	
-		; 91AA	DJNZ $91A8	
-		; 91AC	LD A,L	
-		; 91AD	CP $D4	
-		; 91AF	JP NC,$91C0
+; Show Mission Time change
+	MOVB	L8F19, R0	; 9195	LD A,($8F19)	get high counter
+;NOTE: Block 9198..919E removed, not needed
+	DECB	R0		; 91A1	DEC A	
+	MOVB	R0, L8F19	; 91A2	LD ($8F19),A	
+	MOV	R0, R2		; 91A5	XOR A	
+	ASH	#-3, R2		; Divide by 8.
+	ADD	#141127, R2	; Screen address Mission Time
+	BIC	#177770, R0
+	MOV	R0, R4
+	SUB	#7, R4
+	MOV	#377, R0
+	ASH	R4, R0		; shift right by 0..7 bits
+	BIC	#177421, R0
+	SWAB	R0
+	MOV	#7, R1		; 91A6	LD B,$07	7 lines
+L91A8:	MOV	R2, @#176640
+	MOV	R0, @#176642	; 91A8	LD (HL),A	
+	ADD	#80., R2	; 91A9	INC H		next line
+	SOB	R1, L91A8	; 91AA	DJNZ $91A8	
+				; 91AC	LD A,L	
+	MOVB	L8F19, R0	; 91AD	CP $D4	
+	BNE	L91C0		; 91AF	JP NC,$91C0
 	MOV	#L9247, R3	; 91B2	LD HL,$9247	"TOO LATE MISSION TERMINATED"
 	JMP	L911B		; 91B5	JP $911B	Print text and Exit
-L91B8:		; 91B8	LD A,$70
-		; 91BA	LD B,$07	
-L91BC:		; 91BC	LD (HL),A	
-		; 91BD	INC H	
-		; 91BE	DJNZ $91BC	
-L91C0:	MOV	#6654, R3	; 91C0	LD HL,$0DAC	
-L91C3:	MOV	R3, L8F1A	; 91C3	LD ($8F1A),HL	save Mission Time
+;NOTE: Block 91B8..91BE removed, not needed
+L91C0:	MOV	#665, R3	; 91C0	LD HL,$0DAC	reset low counter
+L91C3:	MOV	R3, L8F1A	; 91C3	LD ($8F1A),HL	save Mission Time low counter
 L91C6:		; 91C6	LD A,R	
 		; 91C8	SLL A	
 	MOV	L8F01, R3	; 91CA	LD HL,($8F01)	get object table address
@@ -3244,7 +3245,7 @@ LA41E:	INCB	R0		; A41E	INC A
 LA428:	MOVB	R0, (R3)	; A428	LD (HL),A	
 	SOB	R1, LA414	; A429	DJNZ $A414	
 ; Routine entry point: Show score
-LA42B:	MOV	#141261, R2	; A42B	LD DE,$529D	address on the screen	
+LA42B:	MOV	#137001, R2	; A42B	LD DE,$529D	address on the screen	
 	MOV	#<LA480+6>, R1	; A42E	LD BC,$A486	Score
 LA431:	MOVB	(R1), R0	; A431	LD A,(BC)	
 	BIC	#177400, R0
