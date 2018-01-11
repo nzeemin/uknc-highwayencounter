@@ -543,7 +543,8 @@ L8F48:	.BYTE	0
 L8F4A:	.BYTE	000,000, 030,026, 050,054, 060,102, 070,130, 100,156, 110,204, 120,232
 	.BYTE	130,260, 020,306, 140,334, 160,000, 040,026, 170,054, 170,102, 070,130
 	.BYTE	050,156, 340,204, 370,232, 350,260, 360,306, 150,334, 303,160, 242,303
-	.BYTE	147,243, 303,321, 231,303, 046,232, 303,160, 232,303, 063,231, 000,000
+	.BYTE	147,243, 303,321, 231,303, 046,232, 303,160, 232,303, 063,231
+L8F88:	.BYTE	000,000
 	.EVEN
 L8FF0:	.BYTE	001,000, 001,004, 001,002, 001,006, 003,000, 003,004, 000,002, 000,006
 
@@ -1360,8 +1361,10 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	MOV	#144., R0	; Number of lines to copy
 10$:	PUSH	R0
 	MOV	#32., R1	; 32. bytes in line
-20$:	MOVB	(R3)+, R0
+20$:	MOVB	(R3), R0
 	BIC    	#177400, R0
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)	; Set address
 	MOV	R0, (R5)	; Write into the screen
 	INC	R2
@@ -1931,6 +1934,8 @@ L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
 L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
 	BIC	#177400, R0			;	|  |
+	SWAB	R0
+	BISB	(R3), R0
 	MOV	R2, @#176640	; 9ABC	LD (DE),A	|  |  косвенный адрес
 	MOV	R0, @#176642			;	|  |  выводим на экран
 	SUB	#80., R2	; 9ABD	DEC D		|  |  к предыдущей строке экрана
@@ -2681,8 +2686,43 @@ LA02C:	MOVB	7(R4), R0	; A02C	LD A,(IX+$07)	get direction
 LA039:	.WORD	0		; Temporary storage for HL
 
 ; Routine (Game mode): Game logic
+; NOTE: in original code ($8F88) stores input mode like 0=keyboard, 2=kempston
 LA03B:
-	RETURN ;STUB
+	CLR	R1		; A04D	LD B,$00	
+	CALL	GETKEY	
+	BEQ	LA07B	
+				; A04F	LD A,$7E	
+				; A051	IN A,($FE)	keyboard #7FFE B - Space
+				; A053	CPL	
+	CMP	R0, #40 ; Space
+				; A054	AND $1F	
+	BNE	LA05B		; A056	JP Z,$A05B	
+	BISB	#1, R1		; A059	SET 0,B		fire
+LA05B:				; A05B	LD A,$F7	
+				; A05D	IN A,($FE)	keyboard #F7FE 1 - 5
+	CMP	R0, #101 ; A
+				; A05F	RRA	
+	BNE	LA064		; A060	JR C,$A064	not "1" -> jump
+	BISB	#2, R1		; A062	SET 1,B		"1"
+LA064:				; A064	LD A,$FB	
+				; A066	IN A,($FE)	keyboard #FBFE Q - T
+	CMP	R0, #121 ; Q
+				; A068	RRA	
+	BNE	LA06D		; A069	JR C,$A06D	not "Q" -> jump
+	BISB	#4, R1		; A06B	SET 2,B		"Q", forward
+LA06D:				; A06D	LD A,$DF	
+				; A06F	IN A,($FE)	keyboard #DFFE Y - P
+	CMP	R0, #120 ; P
+				; A071	RRA	
+	BNE	LA076		; A072	JR C,$A076	not "P" -> jump
+	BISB	#10, R1		; A074	SET 3,B		"P", right
+LA076:	CMP	R0, #117 ; O
+				; A076	RRA	
+	BNE	LA07B		; A077	JR C,$A07B	not "O" -> jump
+	BISB	#20, R1		; A079	SET 4,B		"O", left
+LA07B:				; A07B	LD A,B	
+	MOVB	R1, L8F14	; A07C	LD ($8F14),A	
+	BR	LA11B		; A07F	JP $A11B	
 
 ; Routine
 ; Used by the routine at A11B.
@@ -3676,23 +3716,31 @@ LB3A9:
 	MOV	#<192.-18.-19.>, R0	; Number of lines to copy
 1$:	PUSH	R0
 	MOV	#8., R1			; Counter to loop thru the line
-2$:	MOVB	(R3)+, R0		; get byte
+2$:	MOVB	(R3), R0		; get byte
 	BIC    	#177400, R0		; 
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; get byte
+	MOVB	(R3), R0		; get byte
 	BIC    	#177400, R0		; 
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; get byte
+	MOVB	(R3), R0		; get byte
 	BIC    	#177400, R0		; 
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
-	MOVB	(R3)+, R0		; get byte
+	MOVB	(R3), R0		; get byte
 	BIC    	#177400, R0		; 
+	SWAB	R0
+	BISB	(R3)+, R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
 	INC	R2
@@ -4078,12 +4126,10 @@ LB8C9:	BIC	#177700, R0	; B8C9	AND $3F
 				; B8DB	LD A,$7F	
 	ADD	#000120, R2	; B8DD	INC D		next line
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#077577, (R5)	; B8DE	LD (DE),A	write to the screen
+	MOV	#000177, (R5)	; B8DE	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8DF	INC D		next line
 	MOV	#5, R1		; B8E0	LD B,$05	counter = 5
-LB8E2:	MOVB	(R3), R0	; B8E2	LD A,(HL)	
-	SWAB	R0
-	BISB	(R3)+, R0
+LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)	
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)	; B8E3	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8E4	INC D		next line
@@ -4091,7 +4137,7 @@ LB8E2:	MOVB	(R3), R0	; B8E2	LD A,(HL)
 	SOB	R1, LB8E2	; B8E6	DJNZ $B8E2	repeat
 				; B8E8	LD A,$7F	
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#077577, (R5)	; B8EA	LD (DE),A	write to the screen
+	MOV	#000177, (R5)	; B8EA	LD (DE),A	write to the screen
 	POP	R2		; B8EB	POP DE	
 	INC	R2		; B8EC	INC DE		next position on the screen
 	POP	R3		; B8ED	POP HL	
