@@ -494,7 +494,7 @@ L8E00:	.BYTE	000,002,000,004,340,377,341,377, 377,001,000,004,000,000,001,000
 ; NOTE: Часть переменных находится из кода как ($8F00 + смещение), поэтому важно смещение от начала области переменных
 L8F00:	.BYTE	001	; Zone number?
 	.BYTE	0	; Filler
-L8F01:	.WORD	L8A00	; Object table address, 16 bytes per record
+L8F01:	.WORD	L8A00	; Object table address, 16 bytes per record; first record is currently active Vorton
 L8F03:	.WORD	5352	; Current zone offset, used to draw sprites
 L8F05:	.WORD	0	; Current zone low pos = base pos - 128.
 L8F07:	.WORD	260	; Current zone high pos
@@ -692,16 +692,15 @@ L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010
 L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 	INCB	R1		; 91DD	INC C	
 	INCB	R1		; 91DE	INC C		next Star sprite number
-	MOV	R3, R0		; 91DF	LD A,L
-	BIC	#177400, R0	
-	CMPB	R0, #120	; 91E0	CP $50		TODO: проверить условие
+				; 91DF	LD A,L	
+	CMP	R3, #L8A50	; 91E0	CP $50		Are we out of Vortons?
 	BLO	L91EB		; 91E2	JP C,$91EB	
 	MOV	#L926F, R3	; 91E5	LD HL,$926F	"GAME OVER ALL VORTONS DESTROYED"
 	JMP	L911B		; 91E8	JP $911B	Print text and Exit
 L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)	
 	CMPB	R0, #376	; 91EC	CP $FE	
-	BLO	L91D9		; 91EE	JP NC,$91D9	
-	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	set object table address
+	BHIS	L91D9		; 91EE	JP NC,$91D9	
+	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	set object table address to next Vorton
 	MOV	#10, R2		; 91F4	LD DE,$0008	
 	ADD	R2, R3		; 91F7	ADD HL,DE	to movement flags
 	BITB	#128., (R3)	; 91F8	BIT 7,(HL)	
@@ -3123,12 +3122,14 @@ LA350:	PUSH	R1		; A350	PUSH BC
 ; Routine: DEMO MODE
 LA367:
 	CALL	LA291		; A367	CALL $A291	Prepare tables and show the starting animation
+	MOV	#LA4C7, R3	;NOTE: Moved here from LA372 -- print only once
+	CALL	LB890
 	BR	LA372		; A36A	JR $A372	jump into the loop
 ; DEMO mode loop by zones
 LA36C:	CALL	L92CE		; A36C	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; A36F	CALL $95EF	Show the screen
-LA372:	MOV	#LA4C7, R3	; A372	LD HL,$A4C7	"DEMO MODE"
-	CALL	LB890		; A375	CALL $B890	Print Text
+LA372:				; A372	LD HL,$A4C7	"DEMO MODE"
+				; A375	CALL $B890	Print Text
 	MOV	#40., R1	; A378	LD B,$28	number of iterations in one zone
 LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	CALL	LA8C5		; A37B	CALL $A8C5	|  show one screen in DEMO
@@ -3320,7 +3321,7 @@ LA490:	.BYTE	177,177,177,177,177	; 000
 	.BYTE	101,135,101,135,101	; 011 8
 	.BYTE	101,135,101,137,101	; 012 9
 	.EVEN
-LA4C7:	.WORD	105505
+LA4C7:	.WORD	133416
 	.BYTE	130,312,124,125,135,137,115,135,137,124,125,312,376	; DEMO MODE
 	.EVEN
 LA4D6:	.WORD	113717
@@ -3600,11 +3601,11 @@ LB21E:	.WORD	105516
 	.BYTE	131,300,212,025,050,031,044,377					; 0 EXIT
 ;	.WORD	127127
 ;	.BYTE	131,301,212,033,025,051,022,037,021,042,024,377			; 1 KEYBOARD
-	.WORD	134115
+	.WORD	130323
 	.BYTE	132,305,212,031,036,026,037,042,035,021,044,031,037,036,377,000	; 5 INFORMATION
-	.WORD	135313
+	.WORD	132717
 	.BYTE	132,306,212,024,025,035,037,036,043,044,042,021,044,031,037,036,377,000	; 6 DEMONSTRATION
-	.WORD	136511
+	.WORD	135313
 	.BYTE	132,307,212,043,044,021,042,044,015,027,021,035,025,377		; 7 START GAME
 	.WORD	141104
 	.BYTE	132,212,123,137,140,151,142,131,127,130,144,115,101,111,110,105	; COPYRIGHT 1985 VORTEX SOFTWARE
