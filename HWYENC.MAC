@@ -66,6 +66,7 @@ WTKEY:	TSTB	@#177560
 	BNE	RETN
 ESCKEY:	TSTB	@#177560
 	BPL	ESCKEY
+	MOVB	@#177562, R0	; символ в R0
 	BIS	#15400,R0	; #33 в верхний байт
 	RETURN
 ; Подпрограмма: Получение символа с клавиатуры: флаг Z=0 = есть символ, R0 = полученный символ
@@ -509,7 +510,7 @@ L8F14:	.BYTE	0	; Current action in animation mode (see A34D routine)
 L8F15:	.BYTE	0
 L8F16:	.BYTE	0	; Counter for Lasertron movement indicator
 L8F17:	.BYTE	206	; 
-L8F18:	.BYTE	226	; Low part of attribute address $5Axx
+L8F18:	.BYTE	226	; Low part of attribute address $5Axx for Power indicator
 L8F19:	.BYTE	40	; Mission Time high counter
 L8F0B:	.WORD	0	; Address in 8D52 table; NOTE: Moved here for proper alignment of other fields
 L8F1A:	.WORD	665	; Mission Time low counter
@@ -687,7 +688,7 @@ L91C6:		; 91C6	LD A,R
 	BIC	#177400, R1	; 91D0	LD C,A	
 		; 91D1	JR NC,$91C6	delay
 	MOVB	(R3), R0	; 91D3	LD A,(HL)	
-	CMPB	R0, #376	; 91D4	CP $FE		skipped?
+	CMPB	R0, #376	; 91D4	CP $FE		dead Vorton?
 	BLO	L910A		; 91D6	JP C,$910A	no => continue main loop
 L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010	
 L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
@@ -696,16 +697,18 @@ L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 				; 91DF	LD A,L	
 	CMP	R3, #L8A50	; 91E0	CP $50		Are we out of Vortons?
 	BLO	L91EB		; 91E2	JP C,$91EB	
+; Sorry, all Vortons are dead, game over
 	MOV	#L926F, R3	; 91E5	LD HL,$926F	"GAME OVER ALL VORTONS DESTROYED"
 	JMP	L911B		; 91E8	JP $911B	Print text and Exit
 L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)	
-	CMPB	R0, #376	; 91EC	CP $FE	
-	BHIS	L91D9		; 91EE	JP NC,$91D9	
+	CMPB	R0, #376	; 91EC	CP $FE		skip?
+	BHIS	L91D9		; 91EE	JP NC,$91D9	yes => jump
 	MOV	R3, L8F01	; 91F1	LD ($8F01),HL	set object table address to next Vorton
 	MOV	#10, R2		; 91F4	LD DE,$0008	
 	ADD	R2, R3		; 91F7	ADD HL,DE	to movement flags
-	BITB	#128., (R3)	; 91F8	BIT 7,(HL)	
-	BNE	L91DC		; 91FA	JP NZ,$91DC	
+	BITB	#128., (R3)	; 91F8	BIT 7,(HL)	explosion?
+	BNE	L91DC		; 91FA	JP NZ,$91DC	yes => jump
+; HL points to (+$08) of Auto-Vorton to convert into Main Vorton
 	MOV	R1, R0		; 91FD	LD A,C	
 	MOVB	R0, L8F17	; 91FE	LD ($8F17),A
 	PUSH	R3		; 9201	PUSH HL	
@@ -726,15 +729,16 @@ L9215:		; 9215	LD A,(DE)
 		; 9217	INC DE	
 		; 9218	INC H	
 		; 9219	DJNZ $9215	
-	POP	R3		; 921B	POP HL	
+	POP	R3		; 921B	POP HL		HL points to (+$08)
 	DEC	R3		; 921C	DEC L	
-	DEC	R3		; 921D	DEC L	
-	BIC	#100, (R3)	; 921E	RES 4,(HL)	
-	DEC	R3		; 9220	DEC L	
-	CLRB	(R3)		; 9221	LD (HL),$00	
+	DEC	R3		; 921D	DEC L		HL points to (+$06)
+	BICB	#20, (R3)	; 921E	RES 4,(HL)	
+	DEC	R3		; 9220	DEC L		HL points to (+$05)
+	CLRB	(R3)		; 9221	LD (HL),$00	set base sprite number = Main Vorton
 				; 9223	LD DE,$0005	
-	ADD	#5, R3		; 9226	ADD HL,DE	
-	MOVB	#14., (R3)	; 9227	LD (HL),$0E	
+	ADD	#5, R3		; 9226	ADD HL,DE	HL points to (+$0A)
+	MOVB	#14., (R3)	; 9227	LD (HL),$0E	set sprite number offset
+; Reset the scene to continue with the new Main Vorton
 	CALL	L92CE		; 9229	CALL $92CE	Prepare objects for the current Zone
 	CALL	L95EF		; 922C	CALL $95EF	Show the screen
 	JMP	L910A		; 922F	JP $910A	continue main loop
@@ -2520,7 +2524,7 @@ L9F06:	MOV	R2, R3		; 9F06	EX DE,HL	HL points to (+$02)
 	DEC	R3		; 9F07	DEC L	
 	DEC	R3		; 9F08	DEC L		HL points to (+$00)
 	MOVB	#376, (R3)	; 9F09	LD (HL),$FE	mark HL record as empty
-	BISB	#200, 10(R4)	; 9F0B	SET 7,(IX+$08)	alter IX movement
+	BISB	#200, 10(R4)	; 9F0B	SET 7,(IX+$08)	explosion
 	MOVB	#200, 5(R4)	; 9F0F	LD (IX+$05),$80	
 				; 9F13	LD HL,$8F15	
 	BISB	#10, L8F15	; 9F16	SET 3,(HL)	
@@ -2550,7 +2554,7 @@ L9F32:				; 9F32	LD A,D		movement pattern
 	CMPB	R0, #5		; 9F3D	CP $05	
 	BEQ	L9F44		; 9F3F	JP Z,$9F44	
 	MOVB	#376, (R3)	; 9F42	LD (HL),$FE	mark HL record as empty
-L9F44:	BISB	#200, 10(R4)	; 9F44	SET 7,(IX+$08)	alter movement flags
+L9F44:	BISB	#200, 10(R4)	; 9F44	SET 7,(IX+$08)	explosion
 	MOVB	#200, 5(R4)	; 9F48	LD (IX+$05),$80	
 				; 9F4C	LD HL,$8F15	
 	BISB	#100, L8F15	; 9F4F	SET 6,(HL)	
@@ -2694,43 +2698,38 @@ LA03B:
 				; A04F	LD A,$7E	
 				; A051	IN A,($FE)	keyboard #7FFE B - Space
 				; A053	CPL	
-	CMP	R0, #40 ; Space
-				; A054	AND $1F	
+	CMP	R0, #40 ; Space	; A054	AND $1F	
 	BNE	LA05B		; A056	JP Z,$A05B	
 	BISB	#1, R1		; A059	SET 0,B		fire
 LA05B:				; A05B	LD A,$F7	
 				; A05D	IN A,($FE)	keyboard #F7FE 1 - 5
-	CMP	R0, #101 ; A
-				; A05F	RRA	
+	CMP	R0, #121 ; Q	; A05F	RRA	
 	BNE	LA064		; A060	JR C,$A064	not "1" -> jump
 	BISB	#2, R1		; A062	SET 1,B		"1"
 LA064:				; A064	LD A,$FB	
 				; A066	IN A,($FE)	keyboard #FBFE Q - T
-	CMP	R0, #121 ; Q
-				; A068	RRA	
+	CMP	R0, #101 ; A	; A068	RRA	
 	BNE	LA06D		; A069	JR C,$A06D	not "Q" -> jump
-	BISB	#4, R1		; A06B	SET 2,B		"Q", forward
+	BISB	#4, R1		; A06B	SET 2,B		"Q"
 LA06D:				; A06D	LD A,$DF	
 				; A06F	IN A,($FE)	keyboard #DFFE Y - P
-	CMP	R0, #120 ; P
-				; A071	RRA	
+	CMP	R0, #120 ; P	; A071	RRA	
 	BNE	LA076		; A072	JR C,$A076	not "P" -> jump
 	BISB	#10, R1		; A074	SET 3,B		"P", right
-LA076:	CMP	R0, #117 ; O
-				; A076	RRA	
+LA076:	CMP	R0, #117 ; O	; A076	RRA	
 	BNE	LA07B		; A077	JR C,$A07B	not "O" -> jump
 	BISB	#20, R1		; A079	SET 4,B		"O", left
 LA07B:				; A07B	LD A,B	
-	MOVB	R1, L8F14	; A07C	LD ($8F14),A	
+	MOVB	R1, L8F14	; A07C	LD ($8F14),A	set current action byte
 	BR	LA11B		; A07F	JP $A11B	
 
-; Routine
+; Routine: Bullet died, restore power
 ; Used by the routine at A11B.
 LA10B:
 	MOV	R0, <LA119+2>	; A10B	EX AF,AF'	save AF
 	MOVB	L8F18, R0	; A10C	LD A,($8F18)	
 ;	MOV	#55000, R1	; A10F	LD B,$5A	Screen attribute area
-	INC	R0		; A111	INC A	
+	INC	R0		; A111	INC A		increase power
 	MOVB	R0, L8F18	; A112	LD ($8F18),A	
 ;	ADD	R0, R1		; A115	LD C,A	
 ;				; A116	LD A,$44	
@@ -2741,33 +2740,33 @@ LA119:	MOV	#12345, R0	; A119	EX AF,AF'	restore AF
 ; Routine: Objects logic
 ; Used by the routines at A03B and A34D.
 LA11B:
-	MOV	L8F01, R2	; A11B	LD DE,($8F01)	object table address
+	MOV	L8F01, R2	; A11B	LD DE,($8F01)	current Vorton record addr
 	ADD	#8., R2		; A11F	LD A,$08	to movement flags
 				; A121	ADD A,E	
 				; A122	LD E,A		DE points to (+$08)
-	MOVB	(R2), R0	; A123	LD A,(DE)	get movement flags
-				; A124	BIT 7,A	
-	BPL	1$
+	BITB	#200, (R2)	; A123	LD A,(DE)	get movement flags
+				; A124	BIT 7,A		explosion?
+	BEQ	1$
 	JMP	LA1F8		; A126	JP NZ,$A1F8	no action required
-; Applying the action; movement flags bit 7 = 0
-1$:	MOVB	L8F14, R1	; A129	LD A,($8F14)	get the current action
-	BIC	#177400, R1	; A12C	LD B,A	
+; Applying the action; movement flags bit 7 = 0 -- not explosion
+1$:	MOVB	L8F14, R1	; A129	LD A,($8F14)	get current action flags
+				; A12C	LD B,A	
 	CLR	R0		; A12D	XOR A	
 	MOV	#L8F1D, R3	; A12E	LD HL,$8F1D	HL = $8F1D
 	ASRB	(R3)		; A131	SRL (HL)	
-	BNE	LA155		; A133	JP NZ,$A155	
-	BITB	R1, #4		; A136	BIT 2,B
-	BEQ	LA144		; A138	JR Z,$A144
+;DEBUG	BNE	LA155		; A133	JP NZ,$A155	
+	BITB	R1, #4		; A136	BIT 2,B		break/stop?
+	BEQ	LA144		; A138	JR Z,$A144	no => jump
 	MOVB	(R2), R0	; A13A	LD A,(DE)	get movement flags
 	DECB	R0		; A13B	DEC A	
 	CMPB	R0, #3		; A13C	CP $03	
 	BHIS	LA155		; A13E	JR NC,$A155	
 	MOVB	R0, (R2)	; A140	LD (DE),A	set movement flags
 	BR	LA14F		; A141	JP $A14F	
-LA144:	BITB	R1, #2		; A144	BIT 1,B	
-	BEQ	LA155		; A146	JR Z,$A155	
+LA144:	BITB	R1, #2		; A144	BIT 1,B		accelerate?
+	BEQ	LA155		; A146	JR Z,$A155	no => jump
 	MOVB	(R2), R0	; A148	LD A,(DE)	get movement flags
-	INC	R0		; A149	INC A	
+	INCB	R0		; A149	INC A	
 	CMPB	R0, #3		; A14A	CP $03	
 	BHIS	LA155		; A14C	JR NC,$A155	
 	MOVB	R0, (R2)	; A14E	LD (DE),A	set movement flags
@@ -2777,70 +2776,71 @@ LA14F:	CMPB	R0, #1		; A14F	CP $01
 LA155:	INC	R3		; A155	INC HL		HL = $8F1E
 	DEC	R2		; A156	DEC E		DE points to (+$07)
 	ASRB	(R3)		; A157	SRL (HL)	
-	BNE	LA170		; A159	JP NZ,$A170	
+;DEBUG	BNE	LA170		; A159	JP NZ,$A170	
 	MOVB	#2, (R3)	; A15C	LD (HL),$02	
-	BITB	R1, #10		; A15E	BIT 3,B		rotation right or left?
-	BEQ	LA167		; A160	JR Z,$A167	left => jump
+	BITB	R1, #10		; A15E	BIT 3,B		rotation right?
+	BEQ	LA167		; A160	JR Z,$A167	no => jump
 	MOVB	(R2), R0	; A162	LD A,(DE)	get current direction
-	INC	R0		; A163	INC A		rotate right
+	INCB	R0		; A163	INC A		rotate right
 	BICB	#10, R0		; A164	RES 3,A	
 	MOVB	R0, (R2)	; A166	LD (DE),A	save new direction
-LA167:	BITB	R1, #20		; A167	BIT 4,B	
-	BEQ	LA170		; A169	JR Z,$A170	
+LA167:	BITB	R1, #20		; A167	BIT 4,B		rotation left?
+	BEQ	LA170		; A169	JR Z,$A170	no => jump
 	MOVB	(R2), R0	; A16B	LD A,(DE)	get current direction
-	DEC	R0		; A16C	DEC A		rotate left
+	DECB	R0		; A16C	DEC A		rotate left
 	BIC	#177770, R0	; A16D	AND $07	        0..7
 	MOVB	R0, (R2)	; A16F	LD (DE),A	save new direction
-;
+; Process bullets
 LA170:	MOV	R3, R2		; A170	EX DE,HL	DE = $8F1E
-	MOV	#L8A60, R3	; A171	LD HL,$8A60	таблица объектов, запись #6
+	MOV	#L8A60, R3	; A171	LD HL,$8A60	1st bullet object record addr
 	INC	R2		; A174	INC DE		DE = $8F1F
 	MOVB	(R2), R0	; A175	LD A,(DE)	
 	CMPB	R0, #2		; A176	CP $02	
 	BNE	1$	
-	CALL	LA10B		; A178	CALL Z,$A10B	что-то с атрибутами экрана
+	CALL	LA10B		; A178	CALL Z,$A10B	restore power
 1$:	TSTB	R0		; A17B	AND A	
 	BNE	LA181		; A17C	JR NZ,$A181	
 	MOVB	#376, (R3)	; A17E	LD (HL),$FE	mark the record to skip
-	INC	R0		; A180	INC A	
-LA181:	DEC	R0		; A181	DEC A	
+	INCB	R0		; A180	INC A	
+LA181:	DECB	R0		; A181	DEC A	
 	MOVB	R0, (R2)+	; A182	LD (DE),A	
 				; A183	INC DE		DE = $8F20
 				; A184	LD BC,$0010	
-	ADD	#16., R3	; A187	ADD HL,BC	next record
+	ADD	#16., R3	; A187	ADD HL,BC	HL = 2nd bullet record
 	MOVB	(R2), R0	; A188	LD A,(DE)	
 	CMP	R0, #2		; A189	CP $02	
 	BNE	1$
-	CALL	LA10B		; A18B	CALL Z,$A10B	что-то с атрибутами экрана
+	CALL	LA10B		; A18B	CALL Z,$A10B	restore power
 1$:	TSTB	R0		; A18E	AND A	
 	BNE	LA194		; A18F	JR NZ,$A194	
 	MOVB	#376, (R3)	; A191	LD (HL),$FE	mark the record to skip
-	INC	R0		; A193	INC A	
-LA194:	DEC	R0		; A194	DEC A	
+	INCB	R0		; A193	INC A	
+LA194:	DECB	R0		; A194	DEC A	
 	MOVB	R0, (R2)+	; A195	LD (DE),A	
 				; A196	INC DE		DE = $8F21
 				; A197	LD BC,$0010	
-	ADD	#16., R3	; A19A	ADD HL,BC	next record
+	ADD	#16., R3	; A19A	ADD HL,BC	HL = 3rd bullet record
 	MOVB	(R2), R0	; A19B	LD A,(DE)	
 	CMPB	R0, #2		; A19C	CP $02	
 	BNE	1$
-	CALL	LA10B		; A19E	CALL Z,$A10B	что-то с атрибутами экрана
+	CALL	LA10B		; A19E	CALL Z,$A10B	restore power
 1$:	TSTB	R0		; A1A1	AND A	
 	BNE	LA1A7		; A1A2	JR NZ,$A1A7	
 	MOVB	#376, (R3)	; A1A4	LD (HL),$FE	mark the record to skip
-	INC	R0		; A1A6	INC A	
-LA1A7:	DEC	R0		; A1A7	DEC A	
+	INCB	R0		; A1A6	INC A	
+LA1A7:	DECB	R0		; A1A7	DEC A	
 	MOVB	R0, (R2)	; A1A8	LD (DE),A	
 	MOV	R3, R5		; A1A9	EX DE,HL	HL = $8F21
 	MOV	R2, R3
 	MOV	R5, R2
 	INC	R3		; A1AA	INC HL		HL = $8F22
-	ASR	(R3)		; A1AB	SRL (HL)	
+	ASRB	(R3)		; A1AB	SRL (HL)	
 	BNE	LA1F8		; A1AD	JP NZ,$A1F8	
-	MOVB	L8F14, R0	; A1B0	LD A,($8F14)	get the current action
-	BIT	R0, #1		; A1B3	BIT 0,A		
-	BEQ	LA1F8		; A1B5	JP Z,$A1F8
-; Current action bit 0 = 1	
+;
+				; A1B0	LD A,($8F14)	get current action
+	BITB	L8F14, #1	; A1B3	BIT 0,A		fire?
+	BEQ	LA1F8		; A1B5	JP Z,$A1F8	no => jump
+; Current action bit 0 = 1 -- fire
 	DEC	R3		; A1B8	DEC HL		HL = $8F21
 	MOV	R3, R5		; A1B9	EX DE,HL	DE = $8F21
 	MOV	R2, R3
@@ -2859,15 +2859,14 @@ LA1A7:	DEC	R0		; A1A7	DEC A
 	MOVB	(R2), R0	; A1C9	LD A,(DE)	
 				; A1CA	AND A	
 	BNE	LA1F8		; A1CB	JR NZ,$A1F8	
-LA1CD:	PUSH	R2		; A1CD	EX DE,HL
-	MOV	R3, R2
-	POP	R3	
-	MOVB	#22., (R3)	; A1CE	LD (HL),$16	
-				; A1D0	LD HL,$8F22	
+; Prepare new bullet record; HL = record address
+LA1CD:				; A1CD	EX DE,HL	DE = record address
+	MOVB	#22., (R2)	; A1CE	LD (HL),$16	
+	MOV	R3, R2		; A1D0	LD HL,$8F22	
 	MOVB	#2, L8F22	; A1D3	LD (HL),$02	
-	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	get object table address
+	MOV	L8F01, R3	; A1D5	LD HL,($8F01)	get addr of Main Vorton
 	MOV	#5, R1		; A1D8	LD BC,$0005	5 bytes
-1$:	MOVB	(R3)+, (R2)+	; A1DB	LDIR		copy
+1$:	MOVB	(R3)+, (R2)+	; A1DB	LDIR		copy pos/offset to bullet object
 	SOB	R1, 1$
 	INC	R3		; A1DD	INC L	
 	INC	R3		; A1DE	INC L		HL points to (+$07)
@@ -2881,14 +2880,14 @@ LA1CD:	PUSH	R2		; A1CD	EX DE,HL
 ;
 	MOVB	L8F18, R0	; A1E7	LD A,($8F18)	
 	BIC	#177400, R0
-;	MOV	#55000, R3	; A1EA	LD H,$5A	Screen attribute area
-;	ADD	R0, R3		; A1EC	LD L,A	
-;	CLRB	(R3)		; A1ED	LD (HL),$00	NOTE: Writing attribute, skipping
+;				; A1EA	LD H,$5A	Screen attribute area
+;				; A1EC	LD L,A	
+;				; A1ED	LD (HL),$00	NOTE: Writing attribute, skipping
 	DECB	R0		; A1EF	DEC A	
 	MOVB	R0, L8F18	; A1F0	LD ($8F18),A	
 	MOV	#L8F15, R3	; A1F3	LD HL,$8F15	
 	BISB	#2, (R3)	; A1F6	SET 1,(HL)	
-; Current action bit 0 = 0, or DEMO mode
+; Current action bit 0 = 0 (no fire), or DEMO mode
 LA1F8:
 	MOV	#L8F0E, R3	; A1F8	LD HL,$8F0E	addr of Main Vorton sprite phase
 	MOV	L8F01, R4	; A1FB	LD IX,($8F01)	object table address
@@ -3107,7 +3106,7 @@ LA344:	MOVB	#1, (R3)	; A344	LD (HL),$01	<  start moving
 ; Routine: Perform some action in animation mode
 ; R0 = current action: 0 = none, $12 = rotate right, $14 = rotate left
 ; R1 = loop counter
-LA34D:	MOVB	R0, L8F14	; A34D	LD ($8F14),A	save the current action byte
+LA34D:	MOVB	R0, L8F14	; A34D	LD ($8F14),A	set current action byte
 LA350:	PUSH	R1		; A350	PUSH BC	
 	CALL	L9822		; A351	CALL $9822	Remove objects from the shadow screen
 	CALL	LA11B		; A354	CALL $A11B	Objects logic, perform the action
@@ -3457,23 +3456,25 @@ LA5FE:		; A5FE	PUSH BC
 LA616:	RETURN			; A616	RET	
 ;
 ; Animation in Zone 30.
+; First, all Vortons explode
 LA617:
 	MOV	#5, R1		; A617	LD B,$05	loop counter = 5
 	MOV	#L8A00, R4	; A619	LD IX,$8A00	object table beginning
 LA61D:	MOVB	(R4), R0	; A61D	LD A,(IX+$00)	<
 	CMPB	R0, #376	; A620	CP $FE		|  skip?
 	BHIS	LA638		; A622	JR NC,$A638	|  yes => jump
-	BISB	#128., 10(R4)	; A624	SET 7,(IX+$08)	|
+	BISB	#128., 10(R4)	; A624	SET 7,(IX+$08)	|  explosion
 	MOVB	#128., 5(R4)	; A628	LD (IX+$05),$80	|
 	MOV	#L8F15, R3	; A62C	LD HL,$8F15	|
 	BISB	#64., (R3)	; A62F	SET 6,(HL)	|
 	PUSH	R1		; A631	PUSH BC		|
-	ADD	#25600., R1	; A632	LD B,$64	|
+	ADD	#25600., R1	; A632	LD B,$64	|  bonus for saved Vorton
 	CALL	LA414		; A634	CALL $A414	|  Increase score
 	POP	R1		; A637	POP BC		|
 LA638:				; A638	LD DE,$0010	|
 	ADD	#16., R4	; A63B	ADD IX,DE	|  next record
 	SOB	R1, LA61D	; A63D	DJNZ $A61D	repeat
+;
 	CLRB	10(R4)		; A63F	LD (IX+$08),$00	
 	MOV	#24., R1	; A643	LD B,$18	loop counter = 24.
 	CLR	R0		; A645	XOR A		action = none
