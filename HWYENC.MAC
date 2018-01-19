@@ -509,8 +509,8 @@ L8F13:	.BYTE	0	; +023 Ufo sprite phase
 L8F14:	.BYTE	0	; Current action in animation mode (see A34D routine)
 L8F15:	.BYTE	0
 L8F16:	.BYTE	0	; Counter for Lasertron movement indicator
-L8F17:	.BYTE	206	; 
-L8F18:	.BYTE	3	; Low part of attribute address $5Axx for Power indicator
+L8F17:	.BYTE	0	; Current vorton indicator offset
+L8F18:	.BYTE	3	; Current Power indicator offset
 L8F19:	.BYTE	40	; Mission Time high counter
 L8F0B:	.WORD	0	; Address in 8D52 table; NOTE: Moved here for proper alignment of other fields
 L8F1A:	.WORD	2000	; Mission Time low counter
@@ -532,7 +532,7 @@ L8F25:
 	.BYTE	0
 	.BYTE	0
 	.BYTE	0
-	.BYTE	206
+	.BYTE	0
 	.BYTE	3
 	.BYTE	40
 	.WORD	0
@@ -612,6 +612,12 @@ L910A:		; 910A	LD A,$FD
 				; 9116	LD A,$01	
 	MOVB	#1, L8F23	; 9118	LD ($8F23),A	
 L911B:	CALL	LB890		; 911B	CALL $B890	Print text
+	MOV	#20., R1		; pause counter
+1$:	PUSH	R1
+	CALL	GETKEY			; Swallow any keys pressed
+	CALL	PAUSE			; wait a bit
+	POP	R1
+	SOB	R1, 1$
 	RETURN			; 911E	RET		Exit GAME MODE
 L911F:		; 911F	LD A,$BF
 		; 9121	IN A,($FE)	
@@ -678,14 +684,8 @@ L91A8:	MOV	R2, @#176640
 	BNE	L91C0		; 91AF	JP NC,$91C0
 ; Mission Time is out
 	MOV	#L9247, R3	; 91B2	LD HL,$9247	"TOO LATE MISSION TERMINATED"
-	CALL	LB890		; 91B5	JP $911B	Print text and Exit
-	MOV	#25., R1		; pause counter
-1$:	PUSH	R1
-	CALL	GETKEY			; Swallow any keys pressed
-	CALL	PAUSE			; wait a bit
-	POP	R1
-	SOB	R1, 1$
-	RETURN
+	JMP	L911B		; 91B5	JP $911B	Print text and Exit
+;
 ;NOTE: Block 91B8..91BE removed, not needed
 L91C0:	MOV	#2000, R3	; 91C0	LD HL,$0DAC	reset Mission Time low counter
 L91C3:	MOV	R3, L8F1A	; 91C3	LD ($8F1A),HL	save the counter
@@ -701,7 +701,7 @@ L91C6:		; 91C6	LD A,R
 L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010	
 L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 	INCB	R1		; 91DD	INC C	
-	INCB	R1		; 91DE	INC C		next Star sprite number
+	INCB	R1		; 91DE	INC C		next Vorton indicator
 				; 91DF	LD A,L	
 	CMP	R3, #L8A50	; 91E0	CP $50		Are we out of Vortons?
 	BLO	L91EB		; 91E2	JP C,$91EB	
@@ -720,23 +720,27 @@ L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)
 	MOV	R1, R0		; 91FD	LD A,C	
 	MOVB	R0, L8F17	; 91FE	LD ($8F17),A
 	PUSH	R3		; 9201	PUSH HL	
-		; 9202	LD DE,$92C6	
-		; 9205	LD H,$53	Attributes?
-		; 9207	LD L,C	
-		; 9208	LD B,$04	
-L920A:		; 920A	LD A,(DE)	
-		; 920B	LD (HL),A	
-		; 920C	INC DE	
-		; 920D	INC H	
-		; 920E	DJNZ $920A	
-		; 9210	LD H,$53	
-		; 9212	INC L	
-		; 9213	LD B,$04	
-L9215:		; 9215	LD A,(DE)	
-		; 9216	LD (HL),A	
-		; 9217	INC DE	
-		; 9218	INC H	
-		; 9219	DJNZ $9215	
+; Put white hat on the new Main Vorton indicator
+	MOV	#137072, R2
+	MOV	#<L6020+546>, R3	; Addr in the indicator panel sprite
+	ADD	R1, R2
+	MOV	#4., R1			; 4 lines
+1$:	MOV	R2, @#176640
+	MOVB	(R3), R0
+	BIC	#177400, R0
+	SWAB	R0
+	BISB	(R3)+, R0
+	MOV	R0, @#176642	
+	INC	R2		
+	MOV	R2, @#176640	
+	MOVB	(R3), R0
+	BIC	#177400, R0
+	SWAB	R0
+	BISB	(R3), R0
+	MOV	R0, @#176642	
+	ADD	#<80.-1>, R2
+	ADD	#<32.-1>, R3
+	SOB	R1, 1$
 	POP	R3		; 921B	POP HL		HL points to (+$08)
 	DEC	R3		; 921C	DEC L	
 	DEC	R3		; 921D	DEC L		HL points to (+$06)
@@ -2106,30 +2110,32 @@ L9BE2:	MOVB	L8F16, R0	; 9BE2	LD A,($8F16)	get the counter
 	BEQ	L9AEF		; 9BF0	JP NZ,$9AEF	
 	MOV	#1, R1		; 9BF3	LD B,$01	
 	CALL	LA414		; 9BF5	CALL $A414	increment score
-	MOV	#66., R0	; 9BF8	LD A,$42	
+	MOV	#177777, R0	; 9BF8	LD A,$42	
 				; 9BFA	JR $9BD9        show movement indication
 ; Update Lasertron movement indicator
-L9BD9:	MOV	#136524, R2		; Address on the screen
+L9BD9:	MOV	#177777, R5
+	XOR	R5, R0			; inverse R0
+	MOV	#136524, R2		; Address on the screen
+	MOV	#<L6020+420>, R3
 	MOV	#176642, R4
 	MOV	#8., R1
 1$:	MOV	R2, @#176640		; set address
-	MOV	(R4), R3
-	BIC	#177400, R3
-	TSTB	R0
-	BEQ	2$
-	SWAB	R3
-	BISB	(R4), R3
-2$:	MOV	R3, (R4)		; write to screen
+	MOVB	(R3)+, R5
+	BIC	#177400, R5
+;	SWAB	R5
+;	BISB	(R3)+, R5
+	BIC	R0, R5
+	MOV	R5, (R4)		; write to screen
 	INC	R2
 	MOV	R2, @#176640		; set address
-	MOV	(R4), R3
-	BIC	#177400, R3
-	TSTB	R0
-	BEQ	3$
-	SWAB	R3
-	BISB	(R4), R3
-3$:	MOV	R3, (R4)		; write to screen
-	ADD	#79., R2
+	MOVB	(R3), R5
+	BIC	#177400, R5
+;	SWAB	R5
+;	BISB	(R3), R5
+	BIC	R0, R5
+	MOV	R5, (R4)		; write to screen
+	ADD	#<80.-1>, R2
+	ADD	#<32.-1>, R3
 	SOB	R1, 1$
 	JMP	L9AEF		; 9BDF	JP $9AEF	
 
@@ -2232,7 +2238,7 @@ L9D06:	BISB	#10, (R3)	; 9D06	SET 3,(HL)
 	JMP	L9E1A		; 9D08	JP $9E1A        next record by IX
 L9D0B:	BISB	#100, (R3)	; 9D0B	SET 6,(HL)	
 ; Hide Vorton in the indicator area
-	MOV	R4, R0		; 9D0D	LD HL,$5A86	??? attributes?
+	MOV	R4, R0		; 9D0D	LD HL,$5A86	attributes
 	SUB	#L8A00, R0	; 9D10	LD A,IXl	
 	ASH	#-3, R0		; 9D12	SRL A	
 				; 9D14	SRL A	
@@ -2755,17 +2761,27 @@ LA07B:				; A07B	LD A,B
 	BR	LA11B		; A07F	JP $A11B	
 
 ; Routine: Bullet died, update Power indicator
-LA10B:
-	MOV	R0, <LA119+2>	; A10B	EX AF,AF'	save AF
-	MOVB	L8F18, R0	; A10C	LD A,($8F18)	
-	INCB	R0		; A111	INC A		increase power
-	MOVB	R0, L8F18	; A112	LD ($8F18),A	
-	ADD	#136647, R0		; Address on the screen
+LA10B:	MOV	R0, <LA119+2>	; A10B	EX AF,AF'	save AF
+	PUSH	R2
+	PUSH	R3
+	MOVB	L8F18, R2	; A10C	LD A,($8F18)	
+	INCB	R2		; A111	INC A		increase power
+	MOVB	R2, L8F18	; A112	LD ($8F18),A	
+	MOV	#<L6020+463>, R3	; Addr in the indicator sprite
+	ADD	R2, R3
+	ADD	#136647, R2		; Address on the screen
 	MOV	#7., R1
-2$:	MOV	R0, @#176640
-	MOV	#177376, @#176642
-	ADD	#80., R0		; next line
+2$:	MOV	R2, @#176640
+	MOVB	(R3), R0
+	BIC	#177400, R0
+	SWAB	R0
+	BISB	(R3), R0
+	MOV	R0, @#176642
+	ADD	#80., R2		; next line
+	ADD	#32., R3
 	SOB	R1, 2$
+	POP	R3
+	POP	R2
 LA119:	MOV	#12345, R0	; A119	EX AF,AF'	restore AF
 	RETURN			; A11A	RET	
 
