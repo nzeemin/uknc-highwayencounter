@@ -2231,22 +2231,24 @@ L9D03:	JMP	L9E1A		; 9D03	JP $9E1A	next record by IX
 L9D06:	BISB	#10, (R3)	; 9D06	SET 3,(HL)	
 	JMP	L9E1A		; 9D08	JP $9E1A        next record by IX
 L9D0B:	BISB	#100, (R3)	; 9D0B	SET 6,(HL)	
-; Hide Vorton in the indicator area?
-		; 9D0D	LD HL,$5A86	??? attributes?
-		; 9D10	LD A,IXl	
-		; 9D12	SRL A	
-		; 9D14	SRL A	
-		; 9D16	SRL A	
-		; 9D18	ADD A,L	
-		; 9D19	LD L,A	
-		; 9D1A	LD B,$03	
-		; 9D1C	LD DE,$001F	
-		; 9D1F	XOR A
-	  	; 9D20	LD (HL),A	
-		; 9D21	INC L	
-		; 9D22	LD (HL),A	
-		; 9D23	ADD HL,DE	
-		; 9D24	DJNZ $9D20	
+; Hide Vorton in the indicator area
+	MOV	R4, R0		; 9D0D	LD HL,$5A86	??? attributes?
+	SUB	#L8A00, R0	; 9D10	LD A,IXl	
+	ASH	#-3, R0		; 9D12	SRL A	
+				; 9D14	SRL A	
+				; 9D16	SRL A	
+	ADD	#136632, R0	; 9D18	ADD A,L	
+				; 9D19	LD L,A	
+	MOV	#24., R1 	; 9D1A	LD B,$03	
+				; 9D1C	LD DE,$001F	
+				; 9D1F	XOR A
+L9D20:	MOV	R0, @#176640	; 9D20	LD (HL),A	
+	CLR	@#176642  	
+	INC	R0		; 9D21	INC L	
+	MOV	R0, @#176640
+	CLR	@#176642	; 9D22	LD (HL),A	
+	ADD	#<80.-1>, R0	; 9D23	ADD HL,DE	
+	SOB	R1, L9D20	; 9D24	DJNZ $9D20	
 	JMP	L9E1A		; 9D26	JP $9E1A	next record by IX
 ; Process movement; A = (IX+$08), A != 0
 L9D29:	DEC	R0		; 9D29	DEC A	
@@ -2535,11 +2537,12 @@ L9ED7:	MOV	#L8F15, R3	; 9ED7	LD HL,$8F15
 	BISB	#20, (R3)	; 9EE5	SET 4,(HL)	
 L9EE7:	JMP	L9E1A		; 9EE7	JP $9E1A	next record by IX
 L9EEA:	MOVB	L8F1D, R0	; 9EEA	LD A,($8F1D)	
+	CLC
 	ROLB	R0		; 9EED	RLA	
 	BLO	L9EF2		; 9EEE	JR C,$9EF2	
 	BISB	#20, (R3)	; 9EF0	SET 4,(HL)	
 L9EF2:	CLR	R0		; 9EF2	XOR A	
-	ASRB	10(R4)		; 9EF3	SRL (IX+$08)	alter movement
+	RORB	10(R4)		; 9EF3	SRL (IX+$08)	alter movement
 	BEQ	L9EFC		; 9EF7	JP Z,$9EFC	
 	MOVB	#4, R0		; 9EFA	LD A,$04	
 L9EFC:	MOVB	R0, L8F1D	; 9EFC	LD ($8F1D),A	
@@ -2778,12 +2781,14 @@ LA11B:
 	BEQ	1$
 	JMP	LA1F8		; A126	JP NZ,$A1F8	no action required
 ; Applying the action; movement flags bit 7 = 0 -- not explosion
+;NOTE: BNEs on A133 and LA170 commented out to make controls reliable
 1$:	MOVB	L8F14, R1	; A129	LD A,($8F14)	get current action flags
 				; A12C	LD B,A	
 	CLR	R0		; A12D	XOR A	
 	MOV	#L8F1D, R3	; A12E	LD HL,$8F1D	HL = $8F1D
-	ASRB	(R3)		; A131	SRL (HL)	
-;DEBUG	BNE	LA155		; A133	JP NZ,$A155	
+	CLC
+	RORB	(R3)		; A131	SRL (HL)	
+;	BNE	LA155		; A133	JP NZ,$A155	
 	BITB	R1, #4		; A136	BIT 2,B		break/stop?
 	BEQ	LA144		; A138	JR Z,$A144	no => jump
 	MOVB	(R2), R0	; A13A	LD A,(DE)	get movement flags
@@ -2804,8 +2809,9 @@ LA14F:	CMPB	R0, #1		; A14F	CP $01
 	MOVB	#377, (R3)	; A153	LD (HL),$FF	
 LA155:	INC	R3		; A155	INC HL		HL = $8F1E
 	DEC	R2		; A156	DEC E		DE points to (+$07)
-	ASRB	(R3)		; A157	SRL (HL)	
-;DEBUG	BNE	LA170		; A159	JP NZ,$A170	
+	CLC
+	RORB	(R3)		; A157	SRL (HL)	
+;	BNE	LA170		; A159	JP NZ,$A170	
 	MOVB	#2, (R3)	; A15C	LD (HL),$02	
 	BITB	R1, #10		; A15E	BIT 3,B		rotation right?
 	BEQ	LA167		; A160	JR Z,$A167	no => jump
@@ -3062,7 +3068,7 @@ LA2B8:	MOV	#12., R0	; A2B8	LD A,$0C	<  action = rotate right
 	MOVB	#1, <L8A00+10>	; A2C3	LD A,$01	Main Vorton movement flags = move	
 				; A2C5	LD ($8A08),A	
 	CLR	R0		; A2C8	XOR A		action = none
-	MOV	#14., R1	; A2C9	LD B,$0E	loop counter = 14.
+	MOV	#15., R1	; A2C9	LD B,$0E	loop counter = 14.
 	CALL	LA34D		; A2CB	CALL $A34D	do the action
 LA2CE:	MOV	#8., R0		; A2CE	LD A,$08	action = ??
 	MOV	#1, R1		; A2D0	LD B,$01	loop counter = 1
@@ -3095,17 +3101,17 @@ LA2EB:	MOVB	#1, (R3)	; A2EB	LD (HL),$01	<  set movement flags = move
 	MOVB	#7, (R3)	; A302	LD (HL),$07	по диагонали
 	ADD	R2, R3		; A304	ADD HL,DE	
 	MOVB	#1, (R3)	; A305	LD (HL),$01	по диагонали
-	CLR	R0		; A307	XOR A	
+	CLR	R0		; A307	XOR A		action = none
 	MOV	#12., R1	; A308	LD B,$0C	loop counter
 	CALL	LA34D		; A30A	CALL $A34D	do the action
 ;
 	MOV	#<L8A10+7>, R3	; A30D	LD HL,$8A17	Auto-Vorton direction
 				; A310	LD DE,$000F	
 	MOV	#4, R1		; A313	LD B,$04	counter = 4 extra Vortons
-	CLR	R0		; A315	XOR A	
-LA316:	MOVB	R0, (R3)+	; A316	LD (HL),A	<  direction
+				; A315	XOR A	
+LA316:	CLRB	(R3)+		; A316	LD (HL),A	<  direction
 				; A317	INC HL	        |
-	MOVB	R0, (R3)	; A318	LD (HL),A	|  movement flags = stop
+	CLRB	(R3)		; A318	LD (HL),A	|  movement flags = stop
 	ADD	#15., R3	; A319	ADD HL,DE	|  to the next record
 	SOB	R1, LA316	; A31A	DJNZ $A316	repeat
 LA31C:	MOV	#20., R0	; A31C	LD A,$14	<  action = rotate left
