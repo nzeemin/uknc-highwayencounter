@@ -593,7 +593,7 @@ L8FA3:				; 8FA3	LD DE,$0010
 	BR	L8F8A		; 8FAE	JR $8F8A	repeat
 
 ; Routine: GAME MODE
-L90F2:
+L90F2:	CLR	LKEY
 	CALL	LA450		; 90F2	CALL $A450	
 	MOV	#<LA480+1>, R3	; 90F5	LD HL,$A481	Score
 	MOV	#6, R1		; 90F8	LD B,$06	counter = 6
@@ -604,30 +604,37 @@ L90FA:	CLRB	(R3)		; 90FA	LD (HL),$00	< clear score digit
 	CALL	LA42B		; 9101	CALL $A42B	Show score
 	CALL	L8F8A		; 9104	CALL $8F8A	?? work on table $7B00
 L9107:	CALL	LA291		; 9107	CALL $A291	Prepare tables and show the starting animation
-L910A:		; 910A	LD A,$FD	
-		; 910C	IN A,($FE)	
-		; 910E	AND $11				Check for abort key
-	BR	L911F	; 9110	JP NZ,$911F	
+L910A:				; 910A	LD A,$FD	
+				; 910C	IN A,($FE)	
+	CMP	LKEY, #003 ;^C	; 910E	AND $11		Check for abort key
+	BNE	L911F		; 9110	JP NZ,$911F	
 	MOV	#L9232, R3	; 9113	LD HL,$9232	"MISSION ABORTED"
 				; 9116	LD A,$01	
 	MOVB	#1, L8F23	; 9118	LD ($8F23),A	
 L911B:	CALL	LB890		; 911B	CALL $B890	Print text
-	MOV	#20., R1		; pause counter
+	MOV	#14., R1		; pause counter
 1$:	PUSH	R1
 	CALL	GETKEY			; Swallow any keys pressed
 	CALL	PAUSE			; wait a bit
 	POP	R1
 	SOB	R1, 1$
+;	MOV	#LB839, R3		; "PRESS ANY KEY"
+;	CALL	LB890
 	RETURN			; 911E	RET		Exit GAME MODE
-L911F:		; 911F	LD A,$BF
-		; 9121	IN A,($FE)	
-		; 9123	BIT 4,A				Check for pause key
-	BR	L9163	; 9125	JR NZ,$9163	
+L911F:				; 911F	LD A,$BF
+				; 9121	IN A,($FE)	
+	CMP	LKEY, #020 ;^P	; 9123	BIT 4,A		Check for pause key
+	BNE	L9163		; 9125	JR NZ,$9163	
 	MOV	#L92A0, R3	; 9127	LD HL,$92A0	"PAUSE MODE"
 	CALL	LB890		; 912A	CALL $B890	Print text
-		; 912D	LD HL,$FE0A	
-		; 9130	LD B,$30	
-		; 9132	LD (HL),$02
+	CALL	WTKEY			; Wait for any key pressed
+; Clear the "PAUSE MODE" sign
+	MOV	#133416, R2		; Addr on the screen
+	MOV	#1200, R1		; 8 lines on the screen
+1$:	MOV	R2, @#176640		; set screen address
+	CLR	@#176642		; clear
+	INC	R2
+	SOB	R1, 1$
 
 L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
 	CALL	LA03B		; 9166	CALL $A03B	Objects logic
@@ -697,7 +704,8 @@ L91C6:		; 91C6	LD A,R
 		; 91D1	JR NC,$91C6	delay
 	MOVB	(R3), R0	; 91D3	LD A,(HL)	
 	CMPB	R0, #376	; 91D4	CP $FE		dead Vorton?
-	BLO	L910A		; 91D6	JP C,$910A	no => continue main loop
+	BHIS	L91D9		; 91D6	JP C,$910A	no => continue main loop
+	JMP	L910A
 L91D9:	MOV	#16., R2	; 91D9	LD DE,$0010	
 L91DC:	ADD	R2, R3		; 91DC	ADD HL,DE	next record
 	INCB	R1		; 91DD	INC C	
@@ -769,7 +777,7 @@ L926F:	.WORD	113717
 	.WORD	117516
 	.BYTE	131,212,115,124,125,143,144,142,137,151,125,124,115,212,376,000  ; "DESTROYED"
 
-L92A0:	.WORD	105505
+L92A0:	.WORD	133415
 	.BYTE	131,312,140,121,145,143,125,115,135,137,124,125,312,376  ; "PAUSE MODE"
 	.EVEN
 
@@ -2731,6 +2739,7 @@ LA039:	.WORD	0		; Temporary storage for HL
 LA03B:
 	CLR	R1		; A04D	LD B,$00	
 	CALL	GETKEY	
+	MOV	R0, LKEY
 	BEQ	LA07B	
 				; A04F	LD A,$7E	
 				; A051	IN A,($FE)	keyboard #7FFE B - Space
@@ -2759,6 +2768,7 @@ LA076:	CMP	R0, #071 ; 9	; A076	RRA
 LA07B:				; A07B	LD A,B	
 	MOVB	R1, L8F14	; A07C	LD ($8F14),A	set current action byte
 	BR	LA11B		; A07F	JP $A11B	
+LKEY:	.WORD	0			; Last key pressed
 
 ; Routine: Bullet died, update Power indicator
 LA10B:	MOV	R0, <LA119+2>	; A10B	EX AF,AF'	save AF
@@ -4183,7 +4193,13 @@ LB62C:	.WORD	112514
 	.ASCII	/@RIGHT@/
 	.BYTE	377
 	.WORD	131537
-	.ASCII	/@@FIRE/
+	.ASCII	/@@FIRE@/
+	.BYTE	377
+	.WORD	132733
+	.ASCII	/@PAUSE@/
+	.BYTE	377
+	.WORD	134133
+	.ASCII	/@@ABORT@GAME/
 	.BYTE	376
 	.EVEN
 
@@ -4206,25 +4222,19 @@ LB7B5:	.WORD	111314
 	.BYTE	132,141,377,000							; Q
 	.WORD	130336
 	.BYTE	132,100,377,000							; P
-;	.WORD	131531
-;	.BYTE	132,152,377,000							; Z
-;	.WORD	131533
-;	.BYTE	132,135,377,000							; M
 	.WORD	131536
 	.BYTE	132,112,377,000							; ' '
-;	.WORD	132731
-;	.BYTE	132,130,377,000							; H
-;	.WORD	134131
-;	.BYTE	132,121,377,000							; A
-;	.WORD	134133
-;	.BYTE	132,127,377,000							; G
+	.WORD	132731
+	.BYTE	132,114,140,377							; ^P
+	.WORD	134131
+	.BYTE	132,114,123,377							; ^C
 	.WORD	104312
 	.BYTE	130,312,130,131,127,130,147,121,151,115,115,125,136,123,137,145 ; HIGHWAY
 	.BYTE	136,144,125,142,312,377						; ENCOUNTER
 	.WORD	105510
 	.BYTE	130,212,123,134,121,143,143,131,126,131,125,124,115,131,136,126 ; CLASSIFIED
 	.BYTE	137,142,135,121,144,131,137,136,212,377				; INFORMATION
-	.WORD	141107
+LB839:	.WORD	141107
 	.BYTE	132,212,140,142,125,143,143,115,121,136,151,115,133,125,151,115	; PRESS ANY KEY
 	.BYTE	147,130,125,136,115,142,125,121,124,151,212,376			; WHEN READY
 	.EVEN
@@ -4287,7 +4297,7 @@ LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)
 
 ;------------------------------------------------------------------------------
 
-.BLKW	20			; For stack
+.BLKW	30			; For stack
 
 ;------------------------------------------------------------------------------
 	.END	START
