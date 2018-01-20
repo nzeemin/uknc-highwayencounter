@@ -1,0 +1,2 @@
+C:\bin\rt11\rt11.exe DUMP/BYTE/NOASC/START:75/END:126/TERM MEMDMP.BIN > dump.lst
+

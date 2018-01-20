@@ -62,6 +62,10 @@ namespace SpriteRotate
             writer.WriteLine("\t.EVEN");
             writer.WriteLine();
 
+            ProcessSpriteAAFF(writer);
+            writer.WriteLine("\t.EVEN");
+            writer.WriteLine();
+
             writer.WriteLine("; END OF SPRITE.MAC");
 
             writer.Flush();
@@ -341,6 +345,32 @@ namespace SpriteRotate
                         writer.WriteLine();
                     }
                 }
+            }
+        }
+
+        static void ProcessSpriteAAFF(StreamWriter writer)
+        {
+            const int numberOfTiles = 12 + 13 + 17 + 18 + 21 + 21 + 21 + 21 + 19 + 17 + 8;
+
+            writer.Write("LAAFF:");
+            int addr = 0xAAFF;
+            for (int tile = 0; tile < numberOfTiles; tile++)
+            {
+                writer.Write("\t.BYTE\t");
+                for (int i = 0; i < 8; i++)
+                {
+                    byte b = memdmp[addr];
+                    int bb = 0;
+                    for (int j = 0; j < 8; j++)
+                        bb |= ((b >> (7 - j)) & 1) << j;
+
+                    writer.Write(EncodeOctalString((byte)bb));
+                    if (i < 7)
+                        writer.Write(",");
+
+                    addr++;
+                }
+                writer.WriteLine();
             }
         }
 

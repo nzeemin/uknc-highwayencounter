@@ -52,13 +52,15 @@ N $8F82 This entry point is used by the routines at #R$B41B and #R$B4D0.
   $8F82,3 Draw sprite with no shift
 N $8F85 This entry point is used by the routines at #R$B41B and #R$B4D0.
   $8F85,3 Draw sprite with shift by -2px
-c $8F8A Routine
+c $8F89
+B $8F89
+C $8F8A Routine
 D $8F8A Used by the routine at #R$90F2.
 b $8FB0 Text
 B $8FB0 Text to print by #R$B890 routine
 W $9000,240,16
 W $90F0
-c $90F2 Routine
+c $90F2 Routine: GAME MODE
 D $90F2 Used by the routine at #R$B0DE.
 N $9107 This entry point is used by the routine at #R$A694.
 b $9232 Text
@@ -202,6 +204,8 @@ c $A8C5 Routine
 D $A8C5 Used by the routines at #R$A367 and #R$A694.
 c $A8D6 Routine
 D $A8D6 Used by the routine at #R$965D.
+B $AA90
+B $AAFF
   $AAC9,3 Draw sprite with shift by -2px
   $AAD1,3 Draw sprite with no shift
   $AAD9,3 Draw sprite with shift by 2px
