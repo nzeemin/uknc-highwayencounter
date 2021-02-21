@@ -1,5 +1,5 @@
 # uknc-highwayencounter
-Porting game Highway Encounter from ZX Spectrum to UKNC, work in progress.
+Ported game Highway Encounter from ZX Spectrum to UKNC.
 
 Screenshots of the ported version:
 
@@ -11,4 +11,4 @@ Video of DEMO mode:
 
 Links:
 
- * ![Discussion on zk-pk.ru forum](http://zx-pk.ru/threads/27621-hwyenc.html) (in Russian)
+ - [Discussion on zk-pk.ru forum](http://zx-pk.ru/threads/27621-hwyenc.html) (in Russian)

@@ -305,6 +305,8 @@ namespace SpriteRotate
 
         static void ProcessMasksAndSprites(StreamWriter writer, Bitmap bmpTiles)
         {
+            var ctl = new StreamWriter("sprites.ctl");
+
             writer.WriteLine("; Masks and Sprites, 57. sprites, 6 * 24 = 144 bytes each, 8208 bytes in total");
             for (int sprite = 0; sprite < 57; sprite++)  // sprites
             {
@@ -313,6 +315,9 @@ namespace SpriteRotate
                 int y = 8 + (sprite / 6) * 28;
 
                 writer.Write("L{0}:", EncodeHexString2(addr));
+                ctl.Write($"B ${addr:X4},144,18 ");
+                ctl.Write($"#HTML[#UDGARRAY6,,,6,,2;${addr:X4}-${addr + 143:X4}-1-48(sprite{sprite})]");
+                ctl.WriteLine();
 
                 for (int i = 0; i < 6 * 24; i++)  // bytes
                 {
@@ -346,6 +351,9 @@ namespace SpriteRotate
                     }
                 }
             }
+
+            ctl.Flush();
+            ctl.Close();
         }
 
         static void ProcessSpriteAAFF(StreamWriter writer)
