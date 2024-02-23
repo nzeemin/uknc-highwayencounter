@@ -1,4 +1,9 @@
 @echo off
+set rt11exe=C:\bin\rt11\rt11.exe
+
+rem Define ESCchar to use in ANSI escape sequences
+rem https://stackoverflow.com/questions/2048509/how-to-echo-with-different-colors-in-the-windows-command-line
+for /F "delims=#" %%E in ('"prompt #$E# & for %%E in (1) do rem"') do set "ESCchar=%%E"
 
 for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
 set "YY=%dt:~2,2%" & set "YYYY=%dt:~0,4%" & set "MM=%dt:~4,2%" & set "DD=%dt:~6,2%"
@@ -12,7 +17,7 @@ echo VERSTR:	.ASCII /REV;%REVISION%@%DATESTAMP%/ > VERSIO.MAC
 @if exist HWYENC.LST del HWYENC.LST
 @if exist HWYENC.OBJ del HWYENC.OBJ
 
-C:\bin\rt11\rt11.exe MACRO/LIST:DK: HWYENC.MAC
+%rt11exe% MACRO/LIST:DK: HWYENC.MAC
 
 for /f "delims=" %%a in ('findstr /B "Errors detected" HWYENC.LST') do set "errdet=%%a"
 if "%errdet%"=="Errors detected:  0" (
@@ -26,14 +31,14 @@ if "%errdet%"=="Errors detected:  0" (
 @if exist OUTPUT.MAP del OUTPUT.MAP
 @if exist HWYENC.SAV del HWYENC.SAV
 
-C:\bin\rt11\rt11.exe LINK HWYENC /MAP:OUTPUT.MAP
+%rt11exe% LINK HWYENC /MAP:OUTPUT.MAP
 
 for /f "delims=" %%a in ('findstr /B "Undefined globals" OUTPUT.MAP') do set "undefg=%%a"
 if "%undefg%"=="" (
   type OUTPUT.MAP
   echo.
-  echo LINKED SUCCESSFULLY
+  echo %ESCchar%[92mLINKED SUCCESSFULLY%ESCchar%[0m
 ) ELSE (
-  echo ======= LINK FAILED =======
+  echo %ESCchar%[91m======= LINK FAILED =======%ESCchar%[0m
   exit /b
 )
