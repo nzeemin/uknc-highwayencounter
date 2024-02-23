@@ -1,1 +1,2 @@
-*.MAC linguist-language=Macro-11
+*.MAC linguist-detectable=true
+*.MAC linguist-language=MACRO-11

@@ -74,7 +74,7 @@ GETKEY:	TSTB	@#177560	; есть символ?
 	BPL	10$		; нет символа => выходим
 	MOVB	@#177562, R0	; символ в R0
 	CMPB	R0, #33		; Esc ?
-	BEQ	ESCKEY		
+	BEQ	ESCKEY
 	RETURN
 10$:	CLR	R0		; возвращаем пустой код клавиши
 	RETURN
@@ -88,6 +88,7 @@ SPRITE::
 
 ;------------------------------------------------------------------------------
 
+.IIF	GT <.-051400>, ERR514
 	.=51400
 
 LD900:	.BLKB	704.
@@ -104,6 +105,7 @@ LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 
 ;------------------------------------------------------------------------------
 
+.IIF	GT <.-075000>, ERR750
 	.=075000
 
 L7A00:	; Table with sprite addresses
@@ -594,14 +596,14 @@ L8FA3:				; 8FA3	LD DE,$0010
 
 ; Routine: GAME MODE
 L90F2:	CLR	LKEY
-	CALL	LA450		; 90F2	CALL $A450	GAME MODE prepare
+	CALL	LA450		; 90F2	CALL $A450	check score
 	MOV	#<LA480+1>, R3	; 90F5	LD HL,$A481	Score
 	MOV	#6, R1		; 90F8	LD B,$06	counter = 6
 L90FA:	CLRB	(R3)		; 90FA	LD (HL),$00	< clear score digit
 	INC	R3		; 90FC	INC HL		|
 	SOB	R1, L90FA	; 90FD	DJNZ $90FA	repeat
 	MOVB	#1, (R3)	; 90FF	LD (HL),$01	
-	CALL	LA42B		; 9101	CALL $A42B	Show score
+	CALL	LA42B		; 9101	CALL $A42B	print score
 	CALL	L8F8A		; 9104	CALL $8F8A	?? work on table $7B00
 L9107:	CALL	LA291		; 9107	CALL $A291	Prepare tables and show the starting animation
 L910A:				; 910A	LD A,$FD	
@@ -629,11 +631,11 @@ L911F:				; 911F	LD A,$BF
 	CALL	LB890		; 912A	CALL $B890	Print text
 	CALL	WTKEY			; Wait for any key pressed
 ; Clear the "PAUSE MODE" sign
-	MOV	#133416, R2		; Addr on the screen
+	MOV	#176640, R2		; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#133416, (R2)		; set screen address
 	MOV	#1200, R1		; 8 lines on the screen
-1$:	MOV	R2, @#176640		; set screen address
-	CLR	@#176642		; clear
-	INC	R2
+1$:	CLR	@#176642		; clear
+	INC	(R2)			; next screen address
 	SOB	R1, 1$
 
 L9163:	CALL	L9822		; 9163	CALL $9822	Remove objects from the shadow screen
@@ -682,9 +684,9 @@ L918C:	MOV	L8F1A, R3	; 918C	LD HL,($8F1A)	get Mission Time low counter
 	BIC	#177421, R0
 	SWAB	R0
 	MOV	#7, R1		; 91A6	LD B,$07	7 lines
-L91A8:	MOV	R2, @#176640
-	MOV	R0, @#176642	; 91A8	LD (HL),A	
-	ADD	#80., R2	; 91A9	INC H		next line
+	MOV	R2, @#176640
+L91A8:	MOV	R0, @#176642	; 91A8	LD (HL),A	
+	ADD	#80., @#176640	; 91A9	INC H		next line
 	SOB	R1, L91A8	; 91AA	DJNZ $91A8	
 				; 91AC	LD A,L	
 	MOVB	L8F19, R0	; 91AD	CP $D4	
@@ -734,21 +736,20 @@ L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)
 	ADD	R1, R2
 	MOV	#4., R1			; 4 lines
 1$:	MOV	R2, @#176640
-	MOVB	(R3), R0
-	BIC	#177400, R0
+	CLR	R0
+	BISB	(R3), R0
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R0, @#176642	
-	INC	R2		
-	MOV	R2, @#176640	
-	MOVB	(R3), R0
-	BIC	#177400, R0
+	MOV	R0, @#176642
+	INC	@#176640
+	CLR	R0
+	BISB	(R3), R0
 	SWAB	R0
 	BISB	(R3), R0
-	MOV	R0, @#176642	
-	ADD	#<80.-1>, R2
+	MOV	R0, @#176642
+	ADD	#80., R2
 	ADD	#<32.-1>, R3
-	SOB	R1, 1$
+	SOB	R1, 1$			; continue the loop
 	POP	R3		; 921B	POP HL		HL points to (+$08)
 	DEC	R3		; 921C	DEC L	
 	DEC	R3		; 921D	DEC L		HL points to (+$06)
@@ -913,12 +914,13 @@ L9396:	MOVB	(R3)+, R2	; 9396	LD E,(HL)	взяли номер спрайта
 	MOV	(R4)+, R2	; 93A2	LD E,(IX+$00)	address on the screen
 				; 93A5	LD D,$50	
 	MOV	#8., R1		; 93A7	LD B,$08	counter = 8.
-L93A9:	MOVB	(R3)+, R0	; 93A9	LD A,(HL)	получаем 8 пикселов спрайта
-	BIC	#177400, R0
+	MOV	R2, @#176640
+L93A9:	CLR	R0		; 93A9	LD A,(HL)	получаем 8 пикселов спрайта
+	BISB	(R3)+, R0
 	SWAB	R0
-	MOV	R2, @#176640	; 93AA	LD (DE),A	write into screen
-	MOV	R0, @#176642	; 93AB	INC HL	
-	ADD	#80., R2	; 93AC	INC D		next line
+	MOV	R0, @#176642	; 93AA	LD (DE),A	write into screen
+	ADD	#80., @#176640	; 93AB	INC HL		next line
+				; 93AC	INC D
 	SOB	R1, L93A9	; 93AD	DJNZ $93A9	repeat
 	POP	R3		; 93AF	POP HL	
 				; 93B0	INC HL	
@@ -940,7 +942,7 @@ L93C1:	MOVB	(R4), R0	; 93C1	LD A,(IX+$00)	<
 	MOVB	2(R4), R3	; 93C8	LD L,(IX+$01)	
 	BIC	#177400, R3     ; 93CB	LD H,(IX+$02)	get object position
 	SWAB	R3
-	BISB	1(R4), R3	
+	BISB	1(R4), R3
 	MOV	L8F05, R1	; 93CE	LD BC,($8F05)	current zone low pos
 				; 93D2	AND A	
 	SUB	R1, R3		; 93D3	SBC HL,BC	
@@ -1151,7 +1153,7 @@ L9607:	PUSH	R1		; 9607	PUSH BC
 	CALL	L9633		; 9627	CALL $9633	Draw zone border
 	MOV	#<LDF00+1541.>, R3	; 962A	LD HL,$E505	
 	CALL	L9633		; 962D	CALL $9633	Draw zone border
-	JMP	L965D		; 9630	JP $965D	
+	BR	L965D		; 9630	JP $965D	
 
 ; Routine: Draw zone border
 L9633:	MOV	#5, R5		; 9633	LD C,$05	
@@ -1182,7 +1184,7 @@ L965B:	.WORD	0
 
 L965D:	MOVB	#12., L9658	; 965D	LD A,$0C	
 				; 965F	LD ($9658),A	initial column height
-	MOVB	L8F00, R0	; 9662	LD A,($8F00)	Zone number?
+	MOVB	L8F00, R0	; 9662	LD A,($8F00)	Zone number
 	MOV	R0, R3		; 9665	LD H,$00	
 				; 9667	LD L,A	
 	ASH	#4, R3		; 9668	ADD HL,HL	
@@ -1212,7 +1214,7 @@ L967D:	MOVB	(R3), R0	; 967D	LD A,(HL)	Начало цикла рисования верхних столбцов фо
 				; 968B	LD E,L	
 	ASL	R3		; 968C	ADD HL,HL	
 	ADD	R2, R3		; 968D	ADD HL,DE	HL = A * 12.
-				; 968E	LD DE,$650C	
+				; 968E	LD DE,$650C	блок последовательностей паттернов
 	ADD	#L650C, R3	; 9691	ADD HL,DE	
 	MOV	L9658, R0	; 9692	LD A,($9658)	
 	MOV	R0, R5		; 9695	LD B,A		height count
@@ -1238,7 +1240,7 @@ L969C:	MOVB	(R3), R2	; 969C	LD E,(HL)
 	ASH	#3, R3		; 96B1	ADD HL,HL	
 				; 96B2	ADD HL,HL	
 				; 96B3	ADD HL,HL	HL = A * 8.
-	ADD	#L7100, R3	; 96B4	LD DE,$7100	
+	ADD	#L7100, R3	; 96B4	LD DE,$7100	адрес блока паттернов
 				; 96B7	ADD HL,DE	в R3 получили адрес тайла
 	MOV	#8., R0		; 96B8	LD A,$08	счётчик строк = 8.
 	MOV	#32., R2	; 96BA	LD DE,$0020	длина строки 32.
@@ -1309,8 +1311,8 @@ L9711:	MOVB	(R3), R2	; 9711	LD E,(HL)
 				; 9724	LD H,$00	
 	ASH	#3, R3		; 9726	ADD HL,HL	
 				; 9727	ADD HL,HL	
-				; 9728	ADD HL,HL	
-	ADD	#L7100, R3	; 9729	LD DE,$7100	
+				; 9728	ADD HL,HL	HL = A * 8.
+	ADD	#L7100, R3	; 9729	LD DE,$7100	адрес блока паттернов
 				; 972C	ADD HL,DE	
 	MOV	#8., R0		; 972D	LD A,$08	
 	MOV	#32., R2	; 972F	LD DE,$0020	
@@ -1321,15 +1323,15 @@ L9732:				; 9732	EX AF,AF'
 	ADD	R2, R4		; 9738	ADD IX,DE	
 				; 973A	EX AF,AF'	
 	SOB	R0, L9732	; 973B	DEC A	
-				; 973C	JR NZ,$9732	
+				; 973C	JR NZ,$9732	повторяем цикл по строкам
 	MOV	L965B, R3	; 973E	LD HL,($965B)	
 	INC	R3		; 9741	INC HL	
 	SOB	R5, L9711	; 9742	DJNZ $9711	
 	POP	R2		; 9744	POP DE	
 	POP	R2		; 9745	POP DE	
 	POP	R4		; 9746	POP IX	
-	INC	R2		; 9748	INC DE	
-	INC	R4		; 9749	INC IX	
+	INC	R2		; 9748	INC DE		to next column
+	INC	R4		; 9749	INC IX		to next column
 	MOV	L9659, R3	; 974B	LD HL,($9659)	
 	INC	R3		; 974E	INC HL	
 	BITB	#1, R4		; 974F	LD A,IXl	
@@ -1345,7 +1347,7 @@ L9732:				; 9732	EX AF,AF'
 	POP	R3		; 9761	POP HL	
 	DEC	R1		; 9762	DEC C	
 	BNE	L96F8		; 9763	JR NZ,$96F8	
-	MOVB	L8F1C, R0	; 9765	LD A,($8F1C)	Zone number?
+	MOVB	L8F1C, R0	; 9765	LD A,($8F1C)	Zone number
 	BIC	#177400, R0
 	CMPB	R0, #31.	; 9768	CP $1F		Zone < 31. ?
 	BLO	L976D
@@ -1380,20 +1382,20 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 ; Draw screen D905 on the real screen
 	MOV	#176640, R4	; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5	; Адрес порта данных косвенной записи УКНЦ
-	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905	
+	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905
 	MOV	#104304, R2	; 97A9	LD DE,$4000	Screen address
 	MOV	#144., R0	; Number of lines to copy
 10$:	PUSH	R0
 	MOV	#32., R1	; 32. bytes in line
-20$:	MOVB	(R3), R0
-	BIC    	#177400, R0
+	MOV	R2, (R4)	; Set screen address
+20$:	CLR	R0
+	BISB	(R3), R0
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R2, (R4)	; Set address
 	MOV	R0, (R5)	; Write into the screen
-	INC	R2
+	INC	(R4)
 	SOB	R1, 20$
-	ADD	#<80.-32.>, R2	; Next line
+	ADD	#80., R2	; Next line
 	POP	R0
 	SOB	R0, 10$
 ; Копирование подготовленного теневого экрана на второй теневой экран
@@ -1459,8 +1461,8 @@ L982A:	INC	R3		; 982A	INC L		NOTE: first byte replaced with word
 	ADD	#3, R3		; 9831	INC L	
 				; 9832	INC L	
 				; 9833	INC L		HL points to (+$03)
-	MOVB	(R3)+, R2	; 9834	LD E,(HL)	
-	BIC	#177400, R2	; 9835	INC L		HL points to (+$04)
+	CLR	R2		; 9834	LD E,(HL)	
+	BISB	(R3)+, R2	; 9835	INC L		HL points to (+$04)
 	SWAB	R2
 	BISB	(R3), R2	; 9836	LD D,(HL)	DE = object offset
 	SWAB	R2
@@ -1498,8 +1500,8 @@ L985A:
 	MOV	#L8D52, R3	; 985E	LD HL,$8D52	начало таблицы 8D52
 	MOV	R3, L8F0B	; 9861	LD ($8F0B),HL	сохраняем адрес в таблице 8D52
 	CLR	(R3)		; 9864	LD (HL),$00	очищаем таблицу
-L9866:	MOVB	(R4), R0	; 9866	LD A,(IX+$00)	
-	BIC	#177400, R0
+L9866:	CLR	R0		; 9866	LD A,(IX+$00)	
+	BISB	(R4), R0
 	CMPB	R0, #376	; 9869	CP $FE		пустая запись?
 	BEQ	L98D4		; 986B	JP Z,$98D4	да => пропускаем
 	BHIS	L98DC		; 986E	JP NC,$98DC	конец таблицы => переходим к отрисовке
@@ -1956,8 +1958,8 @@ L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|  update marker value
 	MOV	R1, R5		; 9AB7	LD IXl,B	|  save B
 	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
-L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
-	BIC	#177400, R0			;	|  |
+L9ABB:	CLR	R0		; 9ABB	LD A,(HL)	|  <
+	BISB	(R3), R0			;	|  |
 	SWAB	R0
 	BISB	(R3), R0
 	MOV	R2, @#176640	; 9ABC	LD (DE),A	|  |  косвенный адрес
@@ -1969,7 +1971,7 @@ L9ABB:	MOVB	(R3), R0	; 9ABB	LD A,(HL)	|  <
 	SOB	R1, L9ABB	; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
 				; 9AC4	LD A,D	        |
 	ADD	#640., R2	; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
-	ADD	#256., R3	; 9AC7	LD D,A	        |  
+	ADD	#256., R3	; 9AC7	LD D,A	        |
 	MOV	R5, R1		; 9AC8	LD B,IXl	|  restore B
 L9ACA:						;	|
 	DEC	R3		; 9ACA	DEC L		|
@@ -2128,24 +2130,19 @@ L9BD9:	MOV	#177777, R5
 	MOV	#176642, R4
 	MOV	#8., R1
 1$:	MOV	R2, @#176640		; set address
-	MOVB	(R3)+, R5
-	BIC	#177400, R5
-;	SWAB	R5
-;	BISB	(R3)+, R5
+	CLR	R5
+	BISB	(R3)+, R5
 	BIC	R0, R5
 	MOV	R5, (R4)		; write to screen
-	INC	R2
-	MOV	R2, @#176640		; set address
-	MOVB	(R3), R5
-	BIC	#177400, R5
-;	SWAB	R5
-;	BISB	(R3), R5
+	INC	@#176640		; set address
+	CLR	R5
+	BISB	(R3), R5
 	BIC	R0, R5
 	MOV	R5, (R4)		; write to screen
-	ADD	#<80.-1>, R2
+	ADD	#80., R2		; next line
 	ADD	#<32.-1>, R3
-	SOB	R1, 1$
-	JMP	L9AEF		; 9BDF	JP $9AEF	
+	SOB	R1, 1$			; continue the loop
+	JMP	L9AEF		; 9BDF	JP $9AEF
 
 ; Data block: 18 records used to draw the shadow screen
 ;   1st word -- number of blocks in the line; NOTE: byte replaced with word
@@ -2257,11 +2254,10 @@ L9D0B:	BISB	#100, (R3)	; 9D0B	SET 6,(HL)
 				; 9D1C	LD DE,$001F	
 				; 9D1F	XOR A
 L9D20:	MOV	R0, @#176640	; 9D20	LD (HL),A	
-	CLR	@#176642  	
-	INC	R0		; 9D21	INC L	
-	MOV	R0, @#176640
+	CLR	@#176642
+	INC	@#176640	; 9D21	INC L	
 	CLR	@#176642	; 9D22	LD (HL),A	
-	ADD	#<80.-1>, R0	; 9D23	ADD HL,DE	
+	ADD	#80., R0	; 9D23	ADD HL,DE	next line
 	SOB	R1, L9D20	; 9D24	DJNZ $9D20	
 	JMP	L9E1A		; 9D26	JP $9E1A	next record by IX
 ; Process movement; A = (IX+$08), A != 0
@@ -2781,13 +2777,13 @@ LA10B:	MOV	R0, <LA119+2>	; A10B	EX AF,AF'	save AF
 	ADD	R2, R3
 	ADD	#136647, R2		; Address on the screen
 	MOV	#7., R1
-2$:	MOV	R2, @#176640
-	MOVB	(R3), R0
-	BIC	#177400, R0
+	MOV	R2, @#176640
+2$:	CLR	R0
+	BISB	(R3), R0
 	SWAB	R0
 	BISB	(R3), R0
 	MOV	R0, @#176642
-	ADD	#80., R2		; next line
+	ADD	#80., @#176640		; next line
 	ADD	#32., R3
 	SOB	R1, 2$
 	POP	R3
@@ -2941,10 +2937,10 @@ LA1CE:	MOVB	#22., (R2)	; A1CE	LD (HL),$16	set sprite = fireball
 ; Hide one Power column on the indicator
 	MOVB	L8F18, R0	; A1E7	LD A,($8F18)	
 	ADD	#136647, R0		; Address on the screen
+	MOV	R0, @#176640
 	MOV	#7., R1
-2$:	MOV	R0, @#176640
-	CLR	@#176642
-	ADD	#80., R0		; next line
+2$:	CLR	@#176642
+	ADD	#80., @#176640		; next line
 	SOB	R1, 2$		; A1EF	DEC A	
 	DECB	L8F18		; A1F0	LD ($8F18),A	
 	MOV	#L8F15, R3	; A1F3	LD HL,$8F15	
@@ -3227,18 +3223,18 @@ LA37A:	PUSH	R1		; A37A	PUSH BC	        <
 	BR	LA36C		; A3A6	JR $A36C	repeat in the loop by zones
 ; End of the DEMO MODE
 LA3A8:
-; Paint the game screen with red
+; Paint the game screen with green
 	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
 	MOV	#104304, R2		; Screen address
 	MOV	#144., R0		; Number of lines to fill
 1$:	MOV	#32., R1		; Counter to loop thru the line
 	MOV	#177400, R3		; get byte
-2$:	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	R3, (R5)		; Write into the screen
-	INC	R2
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+2$:	MOV	R3, (R5)		; Write into the screen
+	INC	(R4)
 	SOB	R1, 2$
-	ADD	#<80.-32.>, R2		; to next line
+	ADD	#80., R2		; to next line
 	SOB	R0, 1$			; continue loop by lines
 ; Show the sign
 	MOV	#LA4D6, R3	; A3B7	LD HL,$A4D6	"THERE IS ONLY ONE WAY TO ENCOUNTER..."
@@ -3936,7 +3932,7 @@ LB33C:	MOV	#LB499, R3	; B33C	LD HL,$B499	"HIGHWAY ENCOUNTER" pixels address
 	CALL	LB3D8			; B38F	CALL $B3D8	
 	MOV	#<LDF00+990.>, R1	; B392	LD BC,$E2DE	
 	MOVB	#24., R0		; B395	LD A,$18	
-	CALL	LB3D8		; B397	CALL $B3D8	
+	CALL	LB3D8			; B397	CALL $B3D8	
 ;
 ; Routine: Prepare title/info screen
 LB39A:	;STUB
@@ -3950,36 +3946,33 @@ LB3A9:
 	MOV	#<192.-18.-19.>, R0	; Number of lines to copy
 1$:	PUSH	R0
 	MOV	#8., R1			; Counter to loop thru the line
-2$:	MOVB	(R3), R0		; get byte
-	BIC    	#177400, R0		; 
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+2$:	CLR	R0			;
+	BISB	(R3), R0		; get byte
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
-	INC	R2
-	MOVB	(R3), R0		; get byte
-	BIC    	#177400, R0		; 
+	INC	(R4)
+	CLR	R0			;
+	BISB	(R3), R0		; get byte
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
-	INC	R2
-	MOVB	(R3), R0		; get byte
-	BIC    	#177400, R0		; 
+	INC	(R4)
+	CLR	R0			;
+	BISB	(R3), R0		; get byte
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
-	INC	R2
-	MOVB	(R3), R0		; get byte
-	BIC    	#177400, R0		; 
+	INC	(R4)
+	CLR	R0			;
+	BISB	(R3), R0		; get byte
 	SWAB	R0
 	BISB	(R3)+, R0
-	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)		; Write into the screen
-	INC	R2
+	INC	(R4)
 	SOB	R1, 2$
-	ADD	#<80.-32.>, R2		; to next line
+	ADD	#80., R2		; to next line
 	POP	R0
 	SOB	R0, 1$			; continue loop by lines
 
@@ -4194,7 +4187,7 @@ LB571:	CLC
 LB57C:	POP	R2		; B57C	POP DE	
 	POP	R1		; B57D	POP BC	
 	PUSH	R1		; B57E	PUSH BC	
-	MOV	#LB627, R3	; B57F	LD HL,$B627	
+	MOV	#LB627, R3	; B57F	LD HL,$B627	temp storage	
 	BITB	#1, R1		; B582	BIT 0,C	
 	BEQ	LB5A3		; B584	JR Z,$B5A3	
 	PUSH	R2		; B586	PUSH DE	
@@ -4231,8 +4224,8 @@ LB5A3:	INC	R2		; B5A3	INC DE
 	CLR	@#176642	; B5A8	LD (DE),A	
 	ADD	#80., R2	; B5A9	INC D		next line
 	MOVB	#5, R1		; B5AA	LD B,$05	
-LB5AC:	MOVB	(R3)+, R0	; B5AC	LD A,(HL)	
-	BIC	#177400, R0
+LB5AC:	CLR	R0		; B5AC	LD A,(HL)	
+	BISB	(R3)+, R0
 	MOV	R2, @#176640   		; Устанавливаем косвенный адрес
 	MOV	R0, @#176642	; B5AD	LD (DE),A	
 				; B5AE	INC HL	

@@ -329,8 +329,6 @@ c $B890 Routine: Print Text
 D $B890 Used by the routines at #R$90F2, #R$A367, #R$A694, #R$B0DE and #R$B4D0.
 R $B890 HL ??
 b $B8F0 Masks and Sprites
-;B $B8F0,144,18 #HTML[#UDGARRAY6,,,6,,2;$B8F0-$B97F-1-48(sprite0)]
-;B $B980,144,18 #HTML[#UDGARRAY6,,,6,,2;$B980-$BA0F-1-48(sprite1)]
 B $B8F0,144,18 #HTML[#UDGARRAY6,,,6,,2;$B8F0-$B97F-1-48(sprite0)]
 B $B980,144,18 #HTML[#UDGARRAY6,,,6,,2;$B980-$BA0F-1-48(sprite1)]
 B $BA10,144,18 #HTML[#UDGARRAY6,,,6,,2;$BA10-$BA9F-1-48(sprite2)]
