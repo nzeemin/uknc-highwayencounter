@@ -1397,55 +1397,15 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	MOV	#144., R0	; Number of lines to copy
 10$:	PUSH	R0
 	MOV	R2, (R4)	; Set screen address
-	MOV	#4., R1		; 32. bytes in line; loop unroll x8
-20$:	CLR	R0		; #0 [
+	MOV	#4., R1		; 32. bytes in line
+20$:	.REPT	8.		; loop unroll x8
+	CLR	R0		;
 	BISB	(R3), R0	;
 	SWAB	R0		;
 	BISB	(R3)+, R0	;
 	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #1 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #2 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #3 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #4 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #5 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #6 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
-	CLR	R0		; #7 [
-	BISB	(R3), R0	;
-	SWAB	R0		;
-	BISB	(R3)+, R0	;
-	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		; ]
+	INC	(R4)		;
+	.ENDR
 	SOB	R1, 20$
 	ADD	#80., R2	; Next line
 	POP	R0
@@ -2024,36 +1984,39 @@ L9A9F:	INC	R3		; 9A9F	INC HL		NOTE: byte replaced with word
 	MOV	(SP), R5	; 9AAD	EX (SP),HL	теперь HL = адрес в теневом экране
 	MOV	R3, (SP)
 	MOV	R5, R3
+	MOV	#176640, R5			;	адрес регистра адреса косвенной записи УКНЦ
 	MOV	R0, R4		; 9AAE	LD IXh,A	счётчик цикла по строке
 L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 				; 9AB1	AND A		|  is marker empty?
 	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  yes => skip the block
 	DEC	R0		; 9AB5	DEC A		|
 	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|  update marker value
-	MOV	R1, R5		; 9AB7	LD IXl,B	|  save B
-	MOV	#8., R1		; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
-L9ABB:	CLR	R0		; 9ABB	LD A,(HL)	|  <
+				; 9AB7	LD IXl,B	|  save B
+				; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
+	MOV	R2, (R5)	;			|  косвенный адрес
+L9ABB:	.REPT	8.				;	|  <  loop unroll x8
+	CLR	R0		; 9ABB	LD A,(HL)	|  |  #0 [
 	BISB	(R3), R0			;	|  |
-	SWAB	R0
-	BISB	(R3), R0
-	MOV	R2, @#176640	; 9ABC	LD (DE),A	|  |  косвенный адрес
-	MOV	R0, @#176642			;	|  |  выводим на экран
-	SUB	#80., R2	; 9ABD	DEC D		|  |  к предыдущей строке экрана
+	SWAB	R0				;	|  |
+	BISB	(R3), R0			;	|  |
+	MOV	R0, @#176642	; 9ABC	LD (DE),A	|  |  выводим на экран
+	SUB	#80., (R5)	; 9ABD	DEC D		|  |  к предыдущей строке экрана
 				; 9ABE	LD A,$E0	|  |
 	SUB	#32., R3	; 9AC0	ADD A,L		|  |  к предыдущей строке теневого экрана
-				; 9AC1	LD L,A		|  |
-	SOB	R1, L9ABB	; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
+				; 9AC1	LD L,A		|  |  ]
+	.ENDR			; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
 				; 9AC4	LD A,D	        |
-	ADD	#640., R2	; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
+				; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
 	ADD	#256., R3	; 9AC7	LD D,A	        |
-	MOV	R5, R1		; 9AC8	LD B,IXl	|  restore B
+				; 9AC8	LD B,IXl	|  restore B
 L9ACA:						;	|
 	DEC	R3		; 9ACA	DEC L		|
 	DEC	R2		; 9ACB	DEC E		|  к предыдущей позиции в строке
-	DEC	R1		; 9ACC	DEC C		|  к предыдущему элементу массива
-	SOB	R4, L9AB0	; 9ACD	DEC IXh		|
-				; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
-	POP	R3		; 9AD2	POP HL
+	DEC	R1		; 9ACC	DEC C		|  к предыдущему элементу массива маркеров
+	DEC	R4		; 9ACD	DEC IXh		|
+	BEQ	L9AD2
+	JMP	L9AB0		; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
+L9AD2:	POP	R3		; 9AD2	POP HL
 	MOVB	(R3), R0	; 9AD3	LD A,(HL)
 				; 9AD4	AND A		end of table?
 	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	no => repeat
