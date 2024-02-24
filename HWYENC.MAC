@@ -2778,21 +2778,29 @@ LA03B:
 LA05B:				; A05B	LD A,$F7
 				; A05D	IN A,($FE)	keyboard #F7FE 1 - 5
 	CMP	R0, #061 ; 1	; A05F	RRA
+	BEQ	2$
+	CMP	#15501, R0 ; стрелка вверх
 	BNE	LA064		; A060	JR C,$A064	not "1" -> jump
-	BISB	#2, R1		; A062	SET 1,B		"1"
+2$:	BISB	#2, R1		; A062	SET 1,B		"1"
 LA064:				; A064	LD A,$FB
 				; A066	IN A,($FE)	keyboard #FBFE Q - T
 	CMP	R0, #121 ; Q	; A068	RRA
+	BEQ	4$
+	CMP	#15502, R0 ; стрелка вниз
 	BNE	LA06D		; A069	JR C,$A06D	not "Q" -> jump
-	BISB	#4, R1		; A06B	SET 2,B		"Q"
+4$:	BISB	#4, R1		; A06B	SET 2,B		"Q"
 LA06D:				; A06D	LD A,$DF
 				; A06F	IN A,($FE)	keyboard #DFFE Y - P
 	CMP	R0, #060 ; 0	; A071	RRA
+	BEQ	8$
+	CMP	#15503, R0 ; стрелка вправо
 	BNE	LA076		; A072	JR C,$A076	not "P" -> jump
-	BISB	#10, R1		; A074	SET 3,B		"P", right
+8$:	BISB	#10, R1		; A074	SET 3,B		"P", right
 LA076:	CMP	R0, #071 ; 9	; A076	RRA
+	BEQ	16$
+	CMP	#15504, R0 ; стрелка влево
 	BNE	LA07B		; A077	JR C,$A07B	not "O" -> jump
-	BISB	#20, R1		; A079	SET 4,B		"O", left
+16$:	BISB	#20, R1		; A079	SET 4,B		"O", left
 LA07B:				; A07B	LD A,B
 	MOVB	R1, L8F14	; A07C	LD ($8F14),A	set current action byte
 	BR	LA11B		; A07F	JP $A11B
