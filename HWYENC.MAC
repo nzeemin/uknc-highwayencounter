@@ -1400,8 +1400,6 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	MOV	#4., R1		; 32. bytes in line
 20$:	.REPT	8.		; loop unroll x8
 	CLR	R0		;
-	BISB	(R3), R0	;
-	SWAB	R0		;
 	BISB	(R3)+, R0	;
 	MOV	R0, (R5)	;   Write into the screen
 	INC	(R4)		;
@@ -1996,8 +1994,6 @@ L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
 	MOV	R2, (R5)	;			|  косвенный адрес
 L9ABB:	.REPT	8.				;	|  <  loop unroll x8
 	CLR	R0		; 9ABB	LD A,(HL)	|  |  #0 [
-	BISB	(R3), R0			;	|  |
-	SWAB	R0				;	|  |
 	BISB	(R3), R0			;	|  |
 	MOV	R0, @#176642	; 9ABC	LD (DE),A	|  |  выводим на экран
 	SUB	#80., (R5)	; 9ABD	DEC D		|  |  к предыдущей строке экрана
@@ -3265,7 +3261,7 @@ LA3A8:
 	MOV	#104304, R2		; Screen address
 	MOV	#144., R0		; Number of lines to fill
 1$:	MOV	#32., R1		; Counter to loop thru the line
-	MOV	#177400, R3		; get byte
+	MOV	#000377, R3		; get byte
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 2$:	MOV	R3, (R5)		; Write into the screen
 	INC	(R4)
@@ -3791,6 +3787,7 @@ LAA90:	.WORD	<LD900+31>,	12.	; $19,$D9,$0C
 
 ; Start point
 LB0DE:
+	CALL	STPAL		; Установить игровую палитру
 		; B0DE	LD BC,$F300
 LB0E1:
 	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
@@ -3826,30 +3823,36 @@ LB13C:
 	INC	L5C76		; RND SEED
 	BR	10$
 1$:
-	CMP	R0, #065	; '5' ?
+	CMP	R0, #064	; '4' ?
 	BNE	2$
+; Change current palette
+	INC	@#PALNO		; Следующая палитра
+	CALL	STPAL		; Устанавливаем палитру
+	BR	10$		; Продолжаем в меню
+2$:	CMP	R0, #065	; '5' ?
+	BNE	3$
 ; Show Info Screen
 	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
 	CALL	PRINT
 	CALL	PAUSE		; подождём пока очистится экран
 	JMP	LB4D0		; B1BC	JP $B4D0	Show Info Screen
-2$:	CMP	R0, #066	; '6' ?
-	BNE	3$
+3$:	CMP	R0, #066	; '6' ?
+	BNE	4$
 ; Switch to DEMO mode
 	CALL	LA367		; B17C	CALL $8F79	JP A367  DEMO MODE
 	BR	LB0DE		; B17F	JP $B0E7	back to start point
-3$:	CMP	R0, #067	; '7' ?
-	BNE	4$
+4$:	CMP	R0, #067	; '7' ?
+	BNE	5$
 ; Switch to GAME mode
 	CALL	L90F2		; B18C	CALL $90F2	GAME MODE
 	CALL	WTKEY ;STUB
 	;TODO
         BR	LB0DE 		; B1AA	JP $B0E7	back to start point
-4$:	CMP	R0, #060	; '0' ?
-	BNE	5$
+5$:	CMP	R0, #060	; '0' ?
+	BNE	LB13C		; B200	JP $B13C
+; Exit
+	CALL	STPALD		; Установить палитру
 	JMP	FINISH		; Finish and exit the app
-5$:
-	BR	LB13C		; B200	JP $B13C
 
 ; Routine: Sound
 LB203:
@@ -3871,8 +3874,8 @@ LB21E:	.WORD	105516
 	.BYTE	121,136,121,151,131,212,377,000
 	.WORD	123333
 	.BYTE	131,300,212,025,050,031,044,377					; 0 EXIT
-;	.WORD	127127
-;	.BYTE	131,301,212,033,025,051,022,037,021,042,024,377			; 1 KEYBOARD
+	.WORD	125727
+	.BYTE	132,304,212,040,021,034,025,044,044,025,377,000			; 4 PALETTE
 	.WORD	130323
 	.BYTE	132,305,212,031,036,026,037,042,035,021,044,031,037,036,377,000	; 5 INFORMATION
 	.WORD	132717
@@ -4002,28 +4005,20 @@ LB3A9:
 1$:	PUSH	R0
 	MOV	#8., R1			; Counter to loop thru the line
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-2$:	CLR	R0			;
-	BISB	(R3), R0		; get byte
-	SWAB	R0
-	BISB	(R3)+, R0
+2$:	CLR	R0			; #0
+	BISB	(R3)+, R0		; get byte
 	MOV	R0, (R5)		; Write into the screen
 	INC	(R4)
-	CLR	R0			;
-	BISB	(R3), R0		; get byte
-	SWAB	R0
-	BISB	(R3)+, R0
+	CLR	R0			; #1
+	BISB	(R3)+, R0		; get byte
 	MOV	R0, (R5)		; Write into the screen
 	INC	(R4)
-	CLR	R0			;
-	BISB	(R3), R0		; get byte
-	SWAB	R0
-	BISB	(R3)+, R0
+	CLR	R0			; #2
+	BISB	(R3)+, R0		; get byte
 	MOV	R0, (R5)		; Write into the screen
 	INC	(R4)
-	CLR	R0			;
-	BISB	(R3), R0		; get byte
-	SWAB	R0
-	BISB	(R3)+, R0
+	CLR	R0			; #3
+	BISB	(R3)+, R0		; get byte
 	MOV	R0, (R5)		; Write into the screen
 	INC	(R4)
 	SOB	R1, 2$
@@ -4425,10 +4420,12 @@ LB8C9:	BIC	#177700, R0	; B8C9	AND $3F
 				; B8DB	LD A,$7F
 	ADD	#000120, R2	; B8DD	INC D		next line
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#000177, (R5)	; B8DE	LD (DE),A	write to the screen
+	MOV	#77400, (R5)	; B8DE	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8DF	INC D		next line
 	MOV	#5, R1		; B8E0	LD B,$05	counter = 5
-LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)
+LB8E2:	CLR	R0
+	BISB	(R3)+, R0	; B8E2	LD A,(HL)
+	SWAB	R0
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
 	MOV	R0, (R5)	; B8E3	LD (DE),A	write to the screen
 	ADD	#000120, R2	; B8E4	INC D		next line
@@ -4436,11 +4433,62 @@ LB8E2:	MOVB	(R3)+, R0	; B8E2	LD A,(HL)
 	SOB	R1, LB8E2	; B8E6	DJNZ $B8E2	repeat
 				; B8E8	LD A,$7F
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-	MOV	#000177, (R5)	; B8EA	LD (DE),A	write to the screen
+	MOV	#77400, (R5)	; B8EA	LD (DE),A	write to the screen
 	POP	R2		; B8EB	POP DE
 	INC	R2		; B8EC	INC DE		next position on the screen
 	POP	R3		; B8ED	POP HL
 	BR	LB8C0		; B8EE	JR $B8C0
+
+;------------------------------------------------------------------------------
+
+PALNO:	.WORD	0		; Номер текущей палитры
+; Палитра для установки в памяти ПП
+;		 |____....____....|
+PALETD:	.WORD	^B1011101010011000	; Палитра УКНЦ по умолчанию
+	.WORD	^B1111111011011100	;
+PALETT:	.WORD	^B1011111010011000	; Игровая палитра 0
+	.WORD	^B1111111111011100	;
+	.WORD	^B1011111010011000	; Игровая палитра 1
+	.WORD	^B1111111111011010	;
+	.WORD	^B1011110010011000	; Игровая палитра 2
+	.WORD	^B1111111111011110	;
+	.WORD	^B1011111110010000	; Игровая палитра 3
+	.WORD	^B1111110011011110	;
+
+; Массив параметров для обмена с ПП по каналу 2
+PPBLCK:	.BYTE	0		; В этом байте будет содержаться код ошибки или 0
+PPBCMD:	.BYTE	20		; Команда (01-ВЫДЕЛИТЬ ПАМЯТЬ, 02-ОСВОБОДИТЬ ПАМЯТЬ 10-ЧТЕНИЕ, 20-ЗАПИСЬ, 30-ПУСК)
+	.WORD	32		; Устройство - периферийный процессор
+PPBAPP:	.WORD	002470		; Адрес ОЗУ ПП - два слова палитры
+PPBACP:	.WORD	PALETT		; Адрес ОЗУ ЦП - адрес новой палитры
+	.WORD	2		; Длина блока в словах
+PPBADR:	.WORD	PPBLCK		; Слово всегда содержит начальный адрес массива параметров
+	.WORD	401		; Стоповый элемент (используется при передаче)
+
+; Вернуть стандартную палитру
+STPALD:
+	MOV	#PALETD, R0
+	BR	STPAL1
+; Установить текущую палитру
+STPAL:
+	MOV	@#PALNO, R0
+	BIC	#177774, R0	; 0..3
+	ASL	R0
+	ASL	R0		; x4
+	ADD	#PALETT, R0
+STPAL1:	MOV	R0, @#PPBACP
+;	BR	PPSEND
+; Подпрограмма передачи по каналу К2 массива параметров в ПП
+PPSEND:	MOV	#PPBADR, R0
+	MOV	#5, R1
+	MTPS	#200
+	BR	1$
+2$:	MOVB	(R0)+, @#176676
+1$:	TSTB	@#176674
+	BPL	1$
+	SOB	R1, 2$
+	MTPS	#0
+	RETURN
 
 ;------------------------------------------------------------------------------
 
