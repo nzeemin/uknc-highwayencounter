@@ -732,7 +732,7 @@ L91EB:	MOVB	(R3), R0	; 91EB	LD A,(HL)
 	MOVB	R0, L8F17	; 91FE	LD ($8F17),A
 	PUSH	R3		; 9201	PUSH HL
 ; Put white hat on the new Main Vorton indicator
-	MOV	#137072, R2
+	MOV	#137072, R2		; screen address
 	MOV	#<L6020+546>, R3	; Addr in the indicator panel sprite
 	ADD	R1, R2
 	MOV	#4., R1			; 4 lines
@@ -910,7 +910,7 @@ L9396:	MOVB	(R3)+, R2	; 9396	LD E,(HL)	взяли номер спрайта
 				; 939D	EX DE,HL
 	ASH	#3, R3		; 939E	ADD HL,HL
 				; 939F	ADD HL,HL
-				; 93A0	ADD HL,HL	*8.
+				; 93A0	ADD HL,HL	* 8.
 	ADD	#L953B, R3	; 93A1	ADD HL,DE	получили адрес спрайта 8x8
 	MOV	(R4)+, R2	; 93A2	LD E,(IX+$00)	address on the screen
 				; 93A5	LD D,$50
@@ -1072,7 +1072,7 @@ L94A4:	CLR	R0
 				; 94BD	ADD HL,HL
 				; 94BE	ADD HL,HL
 				; 94BF	ADD HL,HL
-				; 94C0	ADD HL,HL
+				; 94C0	ADD HL,HL	* 32.
 	MOV	R3, R2		; 94C1	EX DE,HL
 	MOV	#<LE900+5059.>, R3	; 94C2	LD HL,$FCC3
 				; 94C5	AND A
@@ -1194,17 +1194,17 @@ L965B:	.WORD	0
 
 L965D:	MOVB	#12., L9658	; 965D	LD A,$0C
 				; 965F	LD ($9658),A	initial column height
-	MOVB	L8F00, R0	; 9662	LD A,($8F00)	Zone number
-	MOV	R0, R3		; 9665	LD H,$00
+	MOVB	L8F00, R3	; 9662	LD A,($8F00)	Zone number
+				; 9665	LD H,$00
 				; 9667	LD L,A
-	ASH	#4, R3		; 9668	ADD HL,HL
+				; 9668	ADD HL,HL
 				; 9669	ADD HL,HL
 				; 966A	ADD HL,HL
 				; 966B	ADD HL,HL	HL = A * 16.
-	MOV	R3, R2		; 966C	LD D,H
+				; 966C	LD D,H
 				; 966D	LD E,L
-	ASL	R3		; 966E	ADD HL,HL
-	ADD	R2, R3		; 966F	ADD HL,DE	HL = A * 48.
+				; 966E	ADD HL,HL
+	MUL	#48., R3	; 966F	ADD HL,DE	HL = A * 48.
 	ADD	#L6AD0, R3	; 9670	LD DE,$6AD0
 				; 9673	ADD HL,DE
 	MOV	#<LD900+5>, R4	; 9674	LD IX,$D905
@@ -1218,12 +1218,12 @@ L967D:	CLR	R0
 	PUSH	R2		; 9684	PUSH DE
 	MOV	R0, R3		; 9685	LD L,A
 				; 9686	LD H,$00
-	ASL	R3		; 9688	ADD HL,HL
-	ASL	R3		; 9689	ADD HL,HL	HL = A * 4
-	MOV	R3, R2		; 968A	LD D,H
+				; 9688	ADD HL,HL
+				; 9689	ADD HL,HL	HL = A * 4
+				; 968A	LD D,H
 				; 968B	LD E,L
-	ASL	R3		; 968C	ADD HL,HL
-	ADD	R2, R3		; 968D	ADD HL,DE	HL = A * 12.
+				; 968C	ADD HL,HL
+	MUL	#12., R3	; 968D	ADD HL,DE	HL = A * 12.
 				; 968E	LD DE,$650C	блок последовательностей паттернов
 	ADD	#L650C, R3	; 9691	ADD HL,DE
 	MOV	L9658, R0	; 9692	LD A,($9658)
@@ -1294,12 +1294,12 @@ L96F8:	CLR	R0
 	PUSH	R2		; 96FF	PUSH DE
 	MOV	R0, R3		; 9700	LD H,$00
 				; 9702	LD L,A
-	ASL	R3		; 9703	ADD HL,HL
-	ASL	R3		; 9704	ADD HL,HL	HL = A * 4
-	MOV	R3, R2		; 9705	LD D,H
+				; 9703	ADD HL,HL
+				; 9704	ADD HL,HL	HL = A * 4
+				; 9705	LD D,H
 				; 9706	LD E,L
-	ASL	R3		; 9707	ADD HL,HL
-	ADD	R2, R3		; 9708	ADD HL,DE	HL = A * 12.
+				; 9707	ADD HL,HL
+	MUL	#12., R3	; 9708	ADD HL,DE	HL = A * 12.
 	ADD	#L6500, R3	; 9709	LD DE,$6500
 				; 970C	ADD HL,DE
 	MOV	L9658, R0	; 970D	LD A,($9658)
@@ -1393,41 +1393,25 @@ L978D:	BISB	#1, (R3)	; 978D	LD A,(HL)
 	MOV	#176640, R4	; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5	; Адрес порта данных косвенной записи УКНЦ
 	MOV	#<LD900+5>, R3	; 97A6	LD HL,$D905
-	MOV	#104304, R2	; 97A9	LD DE,$4000	Screen address
-	MOV	#144., R0	; Number of lines to copy
-10$:	PUSH	R0
-	MOV	R2, (R4)	; Set screen address
-	MOV	#4., R1		; 32. bytes in line
-20$:	.REPT	8.		; loop unroll x8
+	MOV	#104304, (R4)	; 97A9	LD DE,$4000	Screen address
+	MOV	#144., R2	; Number of lines to copy
+10$:	MOV	#8., R1		; 32. bytes in line
+20$:	.REPT	4.		; loop unroll x8
 	CLR	R0		;
 	BISB	(R3)+, R0	;
 	MOV	R0, (R5)	;   Write into the screen
-	INC	(R4)		;
+	INC	(R4)		;   next column
 	.ENDR
 	SOB	R1, 20$
-	ADD	#80., R2	; Next line
-	POP	R0
-	SOB	R0, 10$
+	ADD	#<80.-32.>, (R4)	; next line
+	SOB	R2, 10$
 ; Копирование подготовленного теневого экрана на второй теневой экран
 	MOV	#<LD900+1005>, R3	; 97DF	LD HL,$DB05
 	MOV	#LEB00, R2	; 97E2	LD DE,$EB00
 	MOV	#256., R1	; 97E5	LD BC,$1000
-1$:	MOVB	(R3)+, (R2)+	; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
+1$:	.REPT	16.		; 97E8	LDIR		Копирование основной части, 4096. байт, 128. строк
 	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+
-	MOVB	(R3)+, (R2)+		; 		loop unroll x16
+	.ENDR				; 		loop unroll x16
 	SOB	R1, 1$
 	MOV	#15., R5	; 97EA	LD C,$0F	15.
 	MOV	#2., R4		; 97EC	LD B,$02	Осталось скопировать 2x8 строк
@@ -1462,14 +1446,9 @@ L97F6:	PUSH	R1		; 97F6	PUSH BC
 				; 9815	LD DE,$FD01
 				; 9818	LD (HL),$00
 	MOV	#36., R1	; 981A	LD BC,$0240	576.
-2$:	CLR	(R3)+		; 981D	LDIR
+2$:	.REPT	8.		; 981D	LDIR
 	CLR	(R3)+
-	CLR	(R3)+
-	CLR	(R3)+
-	CLR	(R3)+
-	CLR	(R3)+
-	CLR	(R3)+
-	CLR	(R3)+			; 		loop unroll x16
+	.ENDR				; 		loop unroll x16
 	SOB	R1, 2$
 ; Now draw flat blockers on both shadow screens
 	JMP	LA546 		; 981F	JP $A546	Draw flat blockers
@@ -1963,57 +1942,60 @@ L9A74:	MOV	(R2)+, R0	; 9A74	LD A,(DE)
 ; Routine -- Draw the shadow screen on the real screen, using draw markers LFD00
 L9A9B:
 	MOV	#L9BFC, R3	; 9A9B	LD HL,$9BFC	Address of table with shadow screen line addresses
-	MOV	(R3), R0	; 9A9E	LD A,(HL)	number of blocks in the line
-L9A9F:	INC	R3		; 9A9F	INC HL		NOTE: byte replaced with word
-	INC	R3
-	MOV	(R3)+, R2	; 9AA0	LD E,(HL)
+	MOV	(R3)+, R4	; 9A9E	LD A,(HL)	number of blocks in the line
+L9A9F:				; 9A9F	INC HL		NOTE: byte replaced with word
+				; 9AA0	LD E,(HL)
 				; 9AA1	INC HL
-				; 9AA2	LD D,(HL)	DE = address in the shadow screen
+	MOV	(R3)+, R5	; 9AA2	LD D,(HL)	DE = address in the shadow screen
 				; 9AA3	INC HL
-	PUSH	R2		; 9AA4	PUSH DE
-	MOV	(R3)+, R2	; 9AA5	LD E,(HL)
+				; 9AA4	PUSH DE
+				; 9AA5	LD E,(HL)
 				; 9AA6	INC HL
-				; 9AA7	LD D,(HL)	DE = address on the real screen
+	MOV	(R3)+, R2	; 9AA7	LD D,(HL)	DE = address on the real screen
 				; 9AA8	INC HL
-	MOV	(R3)+, R1	; 9AA9	LD C,(HL)
+				; 9AA9	LD C,(HL)
 				; 9AAA	INC HL
-				; 9AAB	LD B,(HL)	BC points to draw markers, end of the line
+	MOV	(R3)+, R1	; 9AAB	LD B,(HL)	BC points to draw markers, end of the line
 				; 9AAC	INC HL
-	MOV	(SP), R5	; 9AAD	EX (SP),HL	теперь HL = адрес в теневом экране
-	MOV	R3, (SP)
+	PUSH	R3		; 9AAD	EX (SP),HL	теперь HL = адрес в теневом экране
 	MOV	R5, R3
 	MOV	#176640, R5			;	адрес регистра адреса косвенной записи УКНЦ
-	MOV	R0, R4		; 9AAE	LD IXh,A	счётчик цикла по строке
-L9AB0:	MOVB	(R1), R0	; 9AB0	LD A,(BC)	<
+				; 9AAE	LD IXh,A	счётчик цикла по строке
+L9AB0:	TSTB	-(R1)		; 9AB0	LD A,(BC)	<
 				; 9AB1	AND A		|  is marker empty?
 	BEQ	L9ACA		; 9AB2	JP Z,$9ACA	|  yes => skip the block
-	DEC	R0		; 9AB5	DEC A		|
-	MOVB	R0, (R1)	; 9AB6	LD (BC),A	|  update marker value
-				; 9AB7	LD IXl,B	|  save B
-				; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
+				; 9AB5	DEC A		|
+	DECB	(R1)		; 9AB6	LD (BC),A	|  update marker value
+	PUSH	R1		; 9AB7	LD IXl,B	|  save B
+	MOV	#176642, R1	; 9AB9	LD B,$08	|  Цикл по строкам знакоместа, 8. строк
 	MOV	R2, (R5)	;			|  косвенный адрес
-L9ABB:	.REPT	8.				;	|  <  loop unroll x8
-	CLR	R0		; 9ABB	LD A,(HL)	|  |  #0 [
+	PUSH	R4
+	MOV	#-32., R4			;	   для перехода к предыдущей строке теневого экрана
+L9ABB:	.REPT	7.				;	|  <  loop unroll x8
+	CLR	R0		; 9ABB	LD A,(HL)	|  |  #0..6
 	BISB	(R3), R0			;	|  |
-	MOV	R0, @#176642	; 9ABC	LD (DE),A	|  |  выводим на экран
+	MOV	R0, (R1)	; 9ABC	LD (DE),A	|  |  выводим на экран
 	SUB	#80., (R5)	; 9ABD	DEC D		|  |  к предыдущей строке экрана
 				; 9ABE	LD A,$E0	|  |
-	SUB	#32., R3	; 9AC0	ADD A,L		|  |  к предыдущей строке теневого экрана
-				; 9AC1	LD L,A		|  |  ]
-	.ENDR			; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
+	ADD	R4, R3		; 9AC0	ADD A,L		|  |  к предыдущей строке теневого экрана
+	.ENDR			; 9AC1	LD L,A		|  |
+	CLR	R0				;	      #7 - last iteration, w/o SUBs
+	BISB	(R3), R0			;
+	MOV	R0, (R1)			;
+				; 9AC2	DJNZ $9ABB	|  продолжение цикла по строкам
 				; 9AC4	LD A,D	        |
 				; 9AC5	ADD A,$08	|  на 8. экранных строк ниже
-	ADD	#256., R3	; 9AC7	LD D,A	        |
-				; 9AC8	LD B,IXl	|  restore B
+	ADD	#<256.-32.>, R3	; 9AC7	LD D,A	        |
+	POP	R4
+	POP	R1		; 9AC8	LD B,IXl	|  restore B
 L9ACA:						;	|
 	DEC	R3		; 9ACA	DEC L		|
 	DEC	R2		; 9ACB	DEC E		|  к предыдущей позиции в строке
-	DEC	R1		; 9ACC	DEC C		|  к предыдущему элементу массива маркеров
-	DEC	R4		; 9ACD	DEC IXh		|
-	BEQ	L9AD2
-	JMP	L9AB0		; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
-L9AD2:	POP	R3		; 9AD2	POP HL
-	MOVB	(R3), R0	; 9AD3	LD A,(HL)
+				; 9ACC	DEC C		|  к предыдущему элементу массива маркеров
+				; 9ACD	DEC IXh		|
+	SOB	R4, L9AB0	; 9ACF	JP NZ,$9AB0	продолжение цикла по строке
+	POP	R3		; 9AD2	POP HL		восстанавливаем адрес в таблице L9BFC
+	MOV	(R3)+, R4	; 9AD3	LD A,(HL)	NOTE: byte replaced with word
 				; 9AD4	AND A		end of table?
 	BNE	L9A9F		; 9AD5	JP NZ,$9A9F	no => repeat
 ;
@@ -2154,8 +2136,7 @@ L9BE2:	MOVB	L8F16, R0	; 9BE2	LD A,($8F16)	get the counter
 	MOV	#177777, R0	; 9BF8	LD A,$42
 				; 9BFA	JR $9BD9        show movement indication
 ; Update Lasertron movement indicator
-L9BD9:	MOV	#177777, R5
-	XOR	R5, R0			; inverse R0
+L9BD9:	COM	R0			; inverse R0
 	MOV	#136524, R2		; Address on the screen
 	MOV	#<L6020+420>, R3
 	MOV	#176642, R4
@@ -2179,25 +2160,25 @@ L9BD9:	MOV	#177777, R5
 ;   1st word -- number of blocks in the line; NOTE: byte replaced with word
 ;   2nd word -- address on the shadow screen
 ;   3rd word -- address on the real screen
-;   4th word -- address in the draw markers area
-L9BFC:	.WORD	012, <LFD00-1027>, 132575, <LFD00+553.>	; 0A FAE9 5729 FF29  line 18
-	.WORD	014, <LFD00-1425>, 131377, <LFD00+523.>	; 0C F9EB 570B FF0B
-	.WORD	016, <LFD00-2023>, 130201, <LFD00+493.>	; 0E F8ED 4FED FEED
-	.WORD	020, <LFD00-2421>, 127003, <LFD00+463.>	; 10 F7EF 4FCF FECF
-	.WORD	022, <LFD00-3017>, 125605, <LFD00+433.>	; 12 F6F1 4FB1 FEB1
-	.WORD	024, <LFD00-3415>, 124407, <LFD00+403.> ; 14 F5F3 4F93 FE93
-	.WORD	026, <LFD00-4013>, 123211, <LFD00+373.>	; 16 F4F5 4F75 FE75
-	.WORD	030, <LFD00-4411>, 122013, <LFD00+343.>	; 18 F3F7 4F57 FE57
-	.WORD	032, <LFD00-5007>, 120615, <LFD00+313.>	; 1A F2F9 4F39 FE39
-	.WORD	033, <LFD00-5405>, 117417, <LFD00+283.>	; 1B F1FB 4F1B FE1B
-	.WORD	033, <LFD00-6003>, 116221, <LFD00+253.> ; 1B F0FD 47FD FDFD
-	.WORD	033, <LFD00-6401>, 115023, <LFD00+223.>	; 1B EFFF 47DF FDDF
-	.WORD	031, <LFD00-7001>, 113623, <LFD00+191.>	; 19 EEFF 47BF FDBF
-	.WORD	027, <LE900+2377>, 112423, <LFD00+159.> ; 17 EDFF 479F FD9F
-	.WORD	025, <LE900+1777>, 111223, <LFD00+127.> ; 15 ECFF 477F FD7F
-	.WORD	023, <LE900+1377>, 110023, <LFD00+95.> 	; 13 EBFF 475F FD5F  line 3
-	.WORD	021, <LE900+777>,  106623, <LFD00+63.> 	; 11 EAFF 473F FD3F  line 2
-	.WORD	017, <LE900+377>,  105423, <LFD00+31.>	; 0F E9FF 471F FD1F  line 1
+;   4th word -- address in the draw markers area, points to element after the last one
+L9BFC:	.WORD	012, <LFD00-1027>, 132575, <LFD00+554.>	; 0A FAE9 5729 FF29  line 18
+	.WORD	014, <LFD00-1425>, 131377, <LFD00+524.>	; 0C F9EB 570B FF0B
+	.WORD	016, <LFD00-2023>, 130201, <LFD00+494.>	; 0E F8ED 4FED FEED
+	.WORD	020, <LFD00-2421>, 127003, <LFD00+464.>	; 10 F7EF 4FCF FECF
+	.WORD	022, <LFD00-3017>, 125605, <LFD00+434.>	; 12 F6F1 4FB1 FEB1
+	.WORD	024, <LFD00-3415>, 124407, <LFD00+404.> ; 14 F5F3 4F93 FE93
+	.WORD	026, <LFD00-4013>, 123211, <LFD00+374.>	; 16 F4F5 4F75 FE75
+	.WORD	030, <LFD00-4411>, 122013, <LFD00+344.>	; 18 F3F7 4F57 FE57
+	.WORD	032, <LFD00-5007>, 120615, <LFD00+314.>	; 1A F2F9 4F39 FE39
+	.WORD	033, <LFD00-5405>, 117417, <LFD00+284.>	; 1B F1FB 4F1B FE1B
+	.WORD	033, <LFD00-6003>, 116221, <LFD00+254.> ; 1B F0FD 47FD FDFD
+	.WORD	033, <LFD00-6401>, 115023, <LFD00+224.>	; 1B EFFF 47DF FDDF
+	.WORD	031, <LFD00-7001>, 113623, <LFD00+192.>	; 19 EEFF 47BF FDBF
+	.WORD	027, <LE900+2377>, 112423, <LFD00+160.> ; 17 EDFF 479F FD9F
+	.WORD	025, <LE900+1777>, 111223, <LFD00+128.> ; 15 ECFF 477F FD7F
+	.WORD	023, <LE900+1377>, 110023, <LFD00+96.> 	; 13 EBFF 475F FD5F  line 3
+	.WORD	021, <LE900+777>,  106623, <LFD00+64.> 	; 11 EAFF 473F FD3F  line 2
+	.WORD	017, <LE900+377>,  105423, <LFD00+32.>	; 0F E9FF 471F FD1F  line 1
 	.WORD	000  ; end-of-table marker
 
 ; Routine: Process object movement
@@ -2278,7 +2259,7 @@ L9D0B:	BISB	#100, (R3)	; 9D0B	SET 6,(HL)
 	SUB	#L8A00, R0	; 9D10	LD A,IXl
 	ASH	#-3, R0		; 9D12	SRL A
 				; 9D14	SRL A
-				; 9D16	SRL A
+				; 9D16	SRL A		divide by 8.
 	ADD	#136632, R0	; 9D18	ADD A,L
 				; 9D19	LD L,A
 	MOV	#24., R1 	; 9D1A	LD B,$03
@@ -2300,9 +2281,9 @@ L9D29:	DEC	R0		; 9D29	DEC A
 	MOV	R0, R3		; 9D2C	LD L,A
 	CLR	R0
 	BISB	7(R4), R0	; 9D2D	LD A,(IX+$07)	movement direction 0..7
-	ADD	R0, R0		; 9D30	ADD A,A		(IX+$07)*2
-	ADD	R0, R0		; 9D31	ADD A,A	        (IX+$07)*4
-	ADD	R0, R0		; 9D32	ADD A,A		(IX+$07)*8 -- bits 3-5
+	ASH	#3, R0		; 9D30	ADD A,A		(IX+$07)*2
+				; 9D31	ADD A,A	        (IX+$07)*4
+				; 9D32	ADD A,A		(IX+$07)*8 -- bits 3-5
 	ADD	R0, R3		; 9D33	ADD A,L		(IX+$07)*8+L -- bits 3-5 and 6-7
 				; 9D34	LD L,A
 	ADD	#L8E00, R3	; 9D35	LD H,$8E	8E00 table address
@@ -3353,7 +3334,7 @@ LA431:	CLR	R0
 	MOV	R0, R1		; A436	LD C,A
 	ASL	R0		; A437	ADD A,A
 	ASL	R0		; A438	ADD A,A
-	ADD	R1, R0		; A439	ADD A,C		*5
+	ADD	R1, R0		; A439	ADD A,C		* 5
 	MOV	#LA490, R3	; A43A	LD HL,$A490
 				; A43D	LD C,A
 				; A43E	LD B,$00
@@ -3795,6 +3776,7 @@ LAA90:	.WORD	<LD900+31>,	12.	; $19,$D9,$0C
 
 ; Start point
 LB0DE:
+	;MTPS    #200            ; Запретить прерывания
 	CALL	STPAL		; Установить игровую палитру
 		; B0DE	LD BC,$F300
 LB0E1:
@@ -3859,7 +3841,8 @@ LB13C:
 5$:	CMP	R0, #060	; '0' ?
 	BNE	LB13C		; B200	JP $B13C
 ; Exit
-	CALL	STPALD		; Установить палитру
+	CALL	STPALD		; Установить стандартную палитру
+	;MTPS    #0              ; Разрешить прерывания
 	JMP	FINISH		; Finish and exit the app
 
 ; Routine: Sound
@@ -4013,22 +3996,12 @@ LB3A9:
 1$:	PUSH	R0
 	MOV	#8., R1			; Counter to loop thru the line
 	MOV	R2, (R4)		; Устанавливаем косвенный адрес
-2$:	CLR	R0			; #0
+2$:	.REPT	4
+	CLR	R0			;
 	BISB	(R3)+, R0		; get byte
 	MOV	R0, (R5)		; Write into the screen
-	INC	(R4)
-	CLR	R0			; #1
-	BISB	(R3)+, R0		; get byte
-	MOV	R0, (R5)		; Write into the screen
-	INC	(R4)
-	CLR	R0			; #2
-	BISB	(R3)+, R0		; get byte
-	MOV	R0, (R5)		; Write into the screen
-	INC	(R4)
-	CLR	R0			; #3
-	BISB	(R3)+, R0		; get byte
-	MOV	R0, (R5)		; Write into the screen
-	INC	(R4)
+	INC	(R4)			;
+	.ENDR
 	SOB	R1, 2$
 	ADD	#80., R2		; to next line
 	POP	R0
@@ -4214,12 +4187,12 @@ LB544:	PUSH	R3		; B544	PUSH HL
 	MOV	R0, R3		; B547	LD L,A
 				; B548	LD H,$00
 	ASR	R3		; B54A	SRL L
-	PUSH	R3		; B54C	PUSH HL
-	ASL	R3		; B54D	ADD HL,HL
-	ASL	R3		; B54E	ADD HL,HL
-	POP	R2		; B54F	POP BC
-	ADD	R2, R3		; B550	ADD HL,BC	*5
-	ADD	#<LB5D7-150.>, R3	; B551	LD BC,$B541
+				; B54C	PUSH HL
+				; B54D	ADD HL,HL
+				; B54E	ADD HL,HL
+				; B54F	POP BC
+	MUL	#5, R3		; B550	ADD HL,BC	* 5
+	ADD	#<LB5D7-150.>, R3	; B551	LD BC,$B541	Small Font address
 				; B554	ADD HL,BC
 	MOV	#LB627, R2	; B555	LD DE,$B627	temp storage
 	MOVB	#5, R1		; B558	LD BC,$0005
@@ -4263,7 +4236,7 @@ LB590:	MOVB	(R2)+, R0	; B590	LD A,(DE)
 	ASH	#4, R0		; B591	SRL A
 				; B593	SRL A
 				; B595	SRL A
-				; B597	SRL A
+				; B597	SRL A		* 16.
 	MOV	R3, @#176640   		; Устанавливаем косвенный адрес
 	BIS	R0, @#176642	; B599	OR (HL)
 				; B59A	LD (HL),A
@@ -4415,10 +4388,10 @@ LB8C9:	BIC	#177700, R0	; B8C9	AND $3F
 	MOV	R0, R3		; B8CC	LD L,A
 				; B8CD	LD H,$00
 				; B8CF	PUSH HL
-	ASL	R3		; B8D0	ADD HL,HL
-	ASL	R3		; B8D1	ADD HL,HL
+				; B8D0	ADD HL,HL
+				; B8D1	ADD HL,HL
 				; B8D2	POP BC
-	ADD	R0, R3		; B8D3	ADD HL,BC	HL <- HL * 5
+	MUL	#5, R3		; B8D3	ADD HL,BC	HL <- HL * 5
 	ADD	#L5B00, R3	; B8D4	LD BC,$5B00
 				; B8D7	ADD HL,BC
 	PUSH	R2		; B8D8	PUSH DE
