@@ -16,6 +16,15 @@
 	.=001000
 START::
 	CLR	@#177560
+	;MTPS	#200		; Запретить прерывания
+	CALL	STPAL		; Установить игровую палитру
+	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
+	CALL	PRINT
+	CALL	PAUSE		; подождём пока очистится экран
+
+	CALL	PRESHT		; Прешифт спрайтов в свободную невидимую область экрана
+
+;30$:	BR 30$ ;DEBUG
 
 	JMP	LB0DE		; Start point
 
@@ -24,22 +33,7 @@ FINISH:
 	CALL	PRINT
 	.EXIT
 
-GAMESC:	; Строка подготовки игрового экрана
-	.BYTE	33,246,62	; Формат экрана 40x24
-	.BYTE	33,240,63	; Цвет символа
-	.BYTE	33,241,60	; Цвет знакоместа 0
-	.BYTE	33,242,60	; Цвет фона 0
-	.BYTE	14		; Clear screen
-	.BYTE	0
-EXITSC:	; Строка очистки экрана перед выходом
-	.BYTE	33,246,061	; Формат экрана 80x24
-	.BYTE	33,240,67	; Цвет символа
-	.BYTE	33,241,61	; Цвет знакоместа 1
-	.BYTE	33,242,61	; Цвет фона 1
-	.BYTE	14		; Очистить экран
-	.BYTE	0
-
-	.EVEN
+;------------------------------------------------------------------------------
 
 ; Подпрограмма: Печать строки: R1 = адрес строки, строка завершается 0; портит R0
 PRINT:
@@ -81,6 +75,7 @@ GETKEY:	TSTB	@#177560	; есть символ?
 
 ;------------------------------------------------------------------------------
 
+	.IIF	GT <.-001200>, ERR012
 	.=1200
 
 SPRITE::
@@ -103,6 +98,86 @@ LFF29:	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.BYTE	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0
 	.EVEN
 
+;------------------------------------------------------------------------------
+
+GAMESC:	; Строка подготовки игрового экрана
+;	.BYTE	33,246,061	; Формат экрана 80x24 ;DEBUG
+	.BYTE	33,246,62	; Формат экрана 40x24
+	.BYTE	33,240,63	; Цвет символа
+	.BYTE	33,241,60	; Цвет знакоместа 0
+	.BYTE	33,242,60	; Цвет фона 0
+	.BYTE	14		; Clear screen
+	.BYTE	0
+EXITSC:	; Строка очистки экрана перед выходом
+	.BYTE	33,246,061	; Формат экрана 80x24
+	.BYTE	33,240,67	; Цвет символа
+	.BYTE	33,241,61	; Цвет знакоместа 1
+	.BYTE	33,242,61	; Цвет фона 1
+	.BYTE	14		; Очистить экран
+	.BYTE	0
+
+	.EVEN
+
+; Прешифт всех 57. спрайтов в свободную правую (невидимую) часть экрана
+; Размещаем прешифтнутые спрайты в 20. колонок, в 3 строки
+; Прешифт на 4px освобождает один из 3-х байт, поэтому для маски и пикселей нужно хранить по два байта.
+PRESHT:
+	CLR	R0		; текущий номер спрайта
+	MOV	#LB8F0, R2	; адрес начала спрайтов
+	MOV	#100050, R3	; косвенный адрес
+	MOV	#20., PSHCOL	; счётчик колонок
+; Цикл по спрайтам
+05$:	MOV	#24., R5
+	PUSH	R0
+	PUSH	R3
+; Цикл по строкам спрайта; R2 = данные спрайта, R3 = косвенный адрес
+10$:	MOV	(R2)+, R0	; Get mask byte 0/1
+	CLR	R1
+	BISB	(R2)+, R1	; Get mask byte 2
+	ASRB	R1		; Shift by 1
+	ROR	R0		;
+	ASRB	R1		; Shift by 2
+	ROR	R0		;
+	ASRB	R1		; Shift by 3
+	ROR	R0		;
+	ASRB	R1		; Shift by 4
+	ROR	R0		;
+	MOV	R3, @#176640
+	MOV	R0, @#176642	; Save bytes 0/1
+	INC	@#176640
+;
+	CLR	R0
+	BISB	(R2)+, R0	; Get pixels byte 0
+	MOV	(R2)+, R1	; Get pixels byte 1/2
+	ASR	R1		; Shift by 1
+	RORB	R0		;
+	ASR	R1		; Shift by 2
+	RORB	R0		;
+	ASR	R1		; Shift by 3
+	RORB	R0		;
+	ASR	R1		; Shift by 4
+	RORB	R0		;
+	SWAB	R0
+	BISB	R1, R0
+	SWAB	R0
+	MOV	R0, @#176642	; Save bytes 0/1
+;
+	ADD	#80., R3	; next line
+	SOB	R5, 10$		; продолжение цикла по строкам спрайта
+;
+	POP	R3		; восстанавливаем косвенный адрес
+	POP	R0		; восстанавливаем номер спрайта
+	INC	R3		; сдвигаем к следующей колонке из спрайтов
+	INC	R3
+	DEC	PSHCOL
+	BNE	20$
+	ADD	#<<24.*80.>-40.>, R3	; к следующей строке из спрайтов
+	MOV	#20., PSHCOL
+20$:	INC	R0
+	CMP	R0, #57.	; это был последний спрайт?
+	BNE	05$		; продолжение цикла по спрайтам
+	RETURN
+PSHCOL:	.WORD	0		; счётчик по колонкам для прешифта
 
 ;------------------------------------------------------------------------------
 
@@ -1704,8 +1779,7 @@ L9915:	.WORD	L99D1	; Draw sprite with shift by 4px
 	.WORD	L9933	; Draw sprite with shift by -2px
 
 ; Routine: Draw sprite with shift by -2px
-; BC = адрес куда рисовать
-; DE = адрес спрайта
+; R1 = адрес куда рисовать, R2 = адрес спрайта
 L9933:	MOV	R1, R3		; 9933	LD L,C
 				; 9934	LD H,B
 	MOV	#24., R0	; 9935	LD A,$18	Sprite height = 24.
@@ -1768,73 +1842,110 @@ L9937:	PUSH	R0		; 9937	EX AF,AF'
 	RETURN			; 997F	RET
 
 ; Routine: Draw sprite with shift by 4px
+; R1 = адрес куда рисовать, R2 = адрес спрайта; расположение байт на экране: 2-1-0
+; Используем прешифт спрайты, размещённые в правой невидимой области экрана
 L99D1:
-	MOV	R1, R3		; 99D1	LD H,B
-				; 99D2	LD L,C
-	MOV	#24., R0	; 99D3	LD A,$18	Sprite height = 24.
-L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
-				; 99D6	EX DE,HL
-	MOV	(R2)+, R0	; 99D7	LD A,(HL)	Get mask byte 0
-				; 99D8	INC HL
-				; 99D9	LD B,(HL)	Get mask byte 1
-				; 99DA	INC HL
-	MOVB	(R2)+, R1	; 99DB	LD C,(HL)	Get mask byte 2
-				; 99DC	INC HL
-				; 99DD	SCF
-	ASRB	R1		; 99DE	RL C		Shift by 1
-	ROR	R0		; 99E0	RL B
-				; 99E2	RLA
-	ASRB	R1		; 99E3	RL C		Shift by 2
-	ROR	R0		; 99E5	RL B
-				; 99E7	RLA
-	ASRB	R1		; 99E8	RL C		Shift by 3
-	ROR	R0		; 99EA	RL B
-				; 99EC	RLA
-	ASRB	R1		; 99ED	RL C		Shift by 4
-	ROR	R0		; 99EF	RL B
-				; 99F1	RLA
-				; 99F2	EX DE,HL
-	BICB	R0, (R3)+	; 99F3	AND (HL)
-				; 99F4	LD (HL),A
-	SWAB	R0		; 99F5	LD A,B
-				; 99F6	INC HL
-	BICB	R0, (R3)	; 99F7	AND (HL)
-				; 99F8	LD (HL),A
-	DEC	R3		; 99F9	DEC HL
-				; 99FA	EX DE,HL
-	MOVB	(R2)+, R0	; 99FB	LD A,(HL)
-				; 99FC	INC HL
-	MOV	(R2)+, R1	; 99FD	LD B,(HL)
-				; 99FE	INC HL
-				; 99FF	LD C,(HL)
-				; 9A00	INC HL
-	ASR	R1		; 9A01	SLA C		Shift by 1
-	RORB	R0		; 9A03	RL B
-				; 9A05	RLA
-	ASR	R1		; 9A06	SLA C		Shift by 2
-	RORB	R0		; 9A08	RL B
-				; 9A0A	RLA
-	ASR	R1		; 9A0B	SLA C		Shift by 3
-	RORB	R0		; 9A0D	RL B
-				; 9A0F	RLA
-	ASR	R1		; 9A10	SLA C		Shift by 4
-	RORB	R0		; 9A12	RL B
-				; 9A14	RLA
-				; 9A15	EX DE,HL
-	BISB	R0, (R3)+	; 9A16	OR (HL)
-				; 9A17	LD (HL),A
-				; 9A18	LD A,B
-				; 9A19	INC HL
-	BISB	R1, (R3)	; 9A1A	OR (HL)
-				; 9A1B	LD (HL),A
-	SUB	#33., R3	; 9A1C	LD BC,$FFDF
-				; 9A1F	ADD HL,BC
-	POP	R0		; 9A20	EX AF,AF'	restore counter A
-	SOB	R0, L99D5	; 9A21	DEC A
-				; 9A22	JP NZ,$99D5	loop by sprite height
+	SUB	#LB8F0, R2	; теперь в R2 смещение от начала области спрайтов
+	MOV	R2, R3
+	CLR	R2
+	DIV	#144., R2	; R2 = номер спрайта, R3 = 0 (остаток от деления)
+	MOV	R2, R3
+	CLR	R2
+	DIV	#20., R2	; R2 = номер строки спрайтов, R3 = номер колонки спрайтов
+	ADD	R3, R3		; *2
+	PUSH	R1		; адрес куда рисовать на теневом экране
+	MOV	R2, R1		; номер строки спрайтов
+	MUL	#<24.*80.>, R1
+	ADD	#100050, R1	; косвенный адрес, с которого начинаются прешифт спрайты
+	MOV	R1, R2
+	ADD	R3, R2		; R2 = косвенный адрес прешифт спрайта
+	POP	R3		; R3 = адрес куда рисовать на теневом экране
+	MOV	#24., R0	; количество строк
+L99D5:	PUSH	R0		; цикл по строкам
+	MOV	R2, @#176640
+	MOV	@#176642, R0	; байты маски 0/1
+	INC	@#176640
+	MOV	@#176642, R1	; байты пикселов 0/1
+	INC	@#176640
+	BICB	R0, (R3)	; маска 0
+	BISB	R1, (R3)+	; пиксели 0
+	SWAB	R0
+	BICB	R0, (R3)	; маска 1
+	SWAB	R1
+	BISB	R1, (R3)	; пиксели 1
+	SUB	#33., R3	; prev line
+	ADD	#80., R2	; next line
+	POP	R0
+	SOB	R0, L99D5
+	RETURN
+;
+;	MOV	R1, R3		; 99D1	LD H,B
+;				; 99D2	LD L,C
+;	MOV	#24., R0	; 99D3	LD A,$18	Sprite height = 24.
+;L99D5:	PUSH	R0		; 99D5	EX AF,AF'	store counter A
+;				; 99D6	EX DE,HL
+;	MOV	(R2)+, R0	; 99D7	LD A,(HL)	Get mask byte 0
+;				; 99D8	INC HL
+;				; 99D9	LD B,(HL)	Get mask byte 1
+;				; 99DA	INC HL
+;	MOVB	(R2)+, R1	; 99DB	LD C,(HL)	Get mask byte 2
+;				; 99DC	INC HL
+;				; 99DD	SCF
+;	ASRB	R1		; 99DE	RL C		Shift by 1
+;	ROR	R0		; 99E0	RL B
+;				; 99E2	RLA
+;	ASRB	R1		; 99E3	RL C		Shift by 2
+;	ROR	R0		; 99E5	RL B
+;				; 99E7	RLA
+;	ASRB	R1		; 99E8	RL C		Shift by 3
+;	ROR	R0		; 99EA	RL B
+;				; 99EC	RLA
+;	ASRB	R1		; 99ED	RL C		Shift by 4
+;	ROR	R0		; 99EF	RL B
+;				; 99F1	RLA
+;				; 99F2	EX DE,HL
+;	BICB	R0, (R3)+	; 99F3	AND (HL)	mask byte 0
+;				; 99F4	LD (HL),A
+;	SWAB	R0		; 99F5	LD A,B
+;				; 99F6	INC HL
+;	BICB	R0, (R3)	; 99F7	AND (HL)	mask byte 1
+;				; 99F8	LD (HL),A
+;	DEC	R3		; 99F9	DEC HL
+;				; 99FA	EX DE,HL
+;	MOVB	(R2)+, R0	; 99FB	LD A,(HL)
+;				; 99FC	INC HL
+;	MOV	(R2)+, R1	; 99FD	LD B,(HL)
+;				; 99FE	INC HL
+;				; 99FF	LD C,(HL)
+;				; 9A00	INC HL
+;	ASR	R1		; 9A01	SLA C		Shift by 1
+;	RORB	R0		; 9A03	RL B
+;				; 9A05	RLA
+;	ASR	R1		; 9A06	SLA C		Shift by 2
+;	RORB	R0		; 9A08	RL B
+;				; 9A0A	RLA
+;	ASR	R1		; 9A0B	SLA C		Shift by 3
+;	RORB	R0		; 9A0D	RL B
+;				; 9A0F	RLA
+;	ASR	R1		; 9A10	SLA C		Shift by 4
+;	RORB	R0		; 9A12	RL B
+;				; 9A14	RLA
+;				; 9A15	EX DE,HL
+;	BISB	R0, (R3)+	; 9A16	OR (HL)
+;				; 9A17	LD (HL),A
+;				; 9A18	LD A,B
+;				; 9A19	INC HL
+;	BISB	R1, (R3)	; 9A1A	OR (HL)
+;				; 9A1B	LD (HL),A
+;	SUB	#33., R3	; 9A1C	LD BC,$FFDF
+;				; 9A1F	ADD HL,BC
+;	POP	R0		; 9A20	EX AF,AF'	restore counter A
+;	SOB	R0, L99D5	; 9A21	DEC A
+;				; 9A22	JP NZ,$99D5	loop by sprite height
 	RETURN			; 9A25	RET
 
 ; Routine: Draw sprite with shift by 2px
+; R1 = адрес куда рисовать, R2 = адрес спрайта
 L9A26:
 	MOV	R1, R3		; 9A26	LD H,B
 				; 9A27	LD L,C
@@ -1899,6 +2010,7 @@ L9A2A:	PUSH	R0		; 9A2A	EX AF,AF'
 	RETURN			; 9A6F	RET
 
 ; Routine: Draw sprite with no shift
+; R1 = адрес куда рисовать, R2 = адрес спрайта
 L9A70:	MOV	R1, R3		; 9A70	LD H,B
 				; 9A71	LD L,C
 	MOV	#24., R1	; 9A72	LD B,$18	счётчик цикла = 24.
@@ -3266,11 +3378,23 @@ LA3A8:
 	CALL WTKEY ;STUB
 	RETURN ;STUB
 
+CLRSCR:
+	MOV	#176640, R4		; Адрес порта адреса косвенной записи УКНЦ
+	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
+	MOV	#100000, R2		; Screen address
+	MOV	#264., R0		; Number of lines to fill
+1$:	MOV	#40., R1		; Counter to loop thru the line
+	MOV	R2, (R4)		; Устанавливаем косвенный адрес
+2$:	CLR	(R5)			; Write into the screen
+	INC	(R4)
+	SOB	R1, 2$
+	ADD	#80., R2		; to next line
+	SOB	R0, 1$			; continue loop by lines
+	RETURN
+
 ; Prepare screen and indicators
 LA3D3:
-	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
-	CALL	PRINT
-	CALL	PAUSE		; подождём пока очистится экран
+	CALL	CLRSCR
 ;
 	MOV	#L6020, R3	; A3E0	LD HL,$6020
 	MOV	#135304, R2	; A3E3	LD DE,$5060
@@ -3775,14 +3899,9 @@ LAA90:	.WORD	<LD900+31>,	12.	; $19,$D9,$0C
 	.WORD	<LD900+5021>, 	8.	; $11,$E3,$08
 
 ; Start point
-LB0DE:
-	;MTPS    #200            ; Запретить прерывания
-	CALL	STPAL		; Установить игровую палитру
-		; B0DE	LD BC,$F300
+LB0DE:		; B0DE	LD BC,$F300
 LB0E1:
-	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
-	CALL	PRINT
-	CALL	PAUSE		; подождём пока очистится экран
+	CALL	CLRSCR
 		; B0E1	LD HL,$785A
 		; B0E4	CALL $B203	Sound
 LB0E7:		; B0E7	XOR A
@@ -3822,9 +3941,7 @@ LB13C:
 2$:	CMP	R0, #065	; '5' ?
 	BNE	3$
 ; Show Info Screen
-	MOV	#GAMESC, R1	; Строка для подготовки игрового экрана
-	CALL	PRINT
-	CALL	PAUSE		; подождём пока очистится экран
+	CALL	CLRSCR
 	JMP	LB4D0		; B1BC	JP $B4D0	Show Info Screen
 3$:	CMP	R0, #066	; '6' ?
 	BNE	4$
