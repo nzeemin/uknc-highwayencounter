@@ -1,5 +1,4 @@
 @echo off
-set rt11exe=C:\bin\rt11\rt11.exe
 
 rem Define ESCchar to use in ANSI escape sequences
 rem https://stackoverflow.com/questions/2048509/how-to-echo-with-different-colors-in-the-windows-command-line
@@ -13,32 +12,38 @@ echo REV.%REVISION% %DATESTAMP%
 
 echo VERSTR:	.ASCII /REV;%REVISION%@%DATESTAMP%/ > VERSIO.MAC
 
-@if exist TILES.OBJ del TILES.OBJ
-@if exist HWYENC.LST del HWYENC.LST
-@if exist HWYENC.OBJ del HWYENC.OBJ
-
-%rt11exe% MACRO/LIST:DK: HWYENC.MAC
-
-for /f "delims=" %%a in ('findstr /B "Errors detected" HWYENC.LST') do set "errdet=%%a"
-if "%errdet%"=="Errors detected:  0" (
-  echo COMPILED SUCCESSFULLY
-) ELSE (
-  findstr /RC:"^[ABDEILMNOPQRTUZ] " HWYENC.LST
-  echo ======= %errdet% =======
-  exit /b
-)
-
-@if exist OUTPUT.MAP del OUTPUT.MAP
+@if exist HWYENC.lst del HWYENC.lst
+@if exist HWYENC.obj del HWYENC.obj
+@if exist HWYENC.MAP del HWYENC.MAP
 @if exist HWYENC.SAV del HWYENC.SAV
 
-%rt11exe% LINK HWYENC /MAP:OUTPUT.MAP
-
-for /f "delims=" %%a in ('findstr /B "Undefined globals" OUTPUT.MAP') do set "undefg=%%a"
-if "%undefg%"=="" (
-  type OUTPUT.MAP
-  echo.
-  echo %ESCchar%[92mLINKED SUCCESSFULLY%ESCchar%[0m
+tools\macro11.exe HWYENC.MAC -l HWYENC.lst -o HWYENC.obj -rt11 -se
+if not errorlevel 1 (
+  echo COMPILED SUCCESSFULLY
 ) ELSE (
-  echo %ESCchar%[91m======= LINK FAILED =======%ESCchar%[0m
-  exit /b
+  findstr /RC:"^[ABDEILMNOPQRTUZ] " HWYENC.lst
+  echo ======= %errdet% =======
+  goto :Failed
 )
+
+tools\pclink11.exe /VERBOSITY:1 HWYENC.OBJ /MAP
+if errorlevel 1 (
+  echo ======= LINK FAILED =======
+  goto :Failed
+)
+for /f "delims=" %%a in ('findstr /B "Undefined globals" HWYENC.MAP') do set "undefg=%%a"
+if not "%undefg%"=="" (
+  echo ======= LINK FAILED: Undefined globals =======
+  goto :Failed
+)
+echo LINKED SUCCESSFULLY
+
+dir /-c HWYENC.SAV|findstr /R /C:"HWYENC.SAV"
+
+echo %ESCchar%[92mSUCCESS%ESCchar%[0m
+exit
+
+:Failed
+@echo off
+echo %ESCchar%[91mFAILED%ESCchar%[0m
+exit /b

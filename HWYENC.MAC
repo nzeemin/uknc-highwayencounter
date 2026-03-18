@@ -1,5 +1,4 @@
 	.TITLE	HWYENC
-	.MCALL	.EXIT
 
 .MACRO	PUSH	RR
 	MOV	RR,-(SP)
@@ -31,7 +30,7 @@ START::
 FINISH:
 	MOV	#EXITSC, R1	; Строка очистки экрана перед выходом
 	CALL	PRINT
-	.EXIT
+	EMT	350		; .EXIT
 
 ;------------------------------------------------------------------------------
 
@@ -769,7 +768,7 @@ L91A8:	MOV	R0, @#176642	; 91A8	LD (HL),A
 	BNE	L91C0		; 91AF	JP NC,$91C0
 ; Mission Time is out
 	MOV	#L9247, R3	; 91B2	LD HL,$9247	"TOO LATE MISSION TERMINATED"
-	JMP	L911B		; 91B5	JP $911B	Print text and Exit
+	BR	L911B		; 91B5	JP $911B	Print text and Exit
 ;
 ;NOTE: Block 91B8..91BE removed, not needed
 L91C0:	MOV	#2000, R3	; 91C0	LD HL,$0DAC	reset Mission Time low counter

@@ -1,8 +1,12 @@
-/*.OBJ
-/OUTPUT.MAP
-/HWYENC.LST
-/VERSIO.MAC
 /x-*
+/.vscode
 /SpriteRotate/bin
 /SpriteRotate/obj
 /SpriteRotate/*.suo
+/!versions.txt
+/#notes.txt
+/VERSIO.MAC
+/*.OBJ
+/*.MAP
+/*.LST
+/*.SAV
